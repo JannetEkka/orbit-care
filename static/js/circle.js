@@ -467,7 +467,7 @@
       body.append(el("tr", {},
         el("th", { scope: "row", text: new Date(row.date + "T00:00:00").toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) }),
         el("td", {}, dots, missed.length ? el("div", { class: "small muted", text: `Missed: ${missed.join(", ")}` }) : null),
-        el("td", {}, row.tags.map((t) => el("span", { class: "chip missed", text: label(t) }))),
+        el("td", {}, row.tags.map((t) => el("span", { class: t === "calm" ? "chip given" : "chip missed", text: label(t) }))),
         el("td", { text: row.feeling === "good" ? "😊 good" : row.feeling === "not_good" ? "☹️ not good" : "–" })));
     }
   }
