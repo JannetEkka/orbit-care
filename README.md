@@ -83,7 +83,7 @@ Full details are in [SECURITY.md](SECURITY.md).
 - Request bodies are strict Pydantic models with length and pattern limits, and unknown fields are rejected. Email headers are stripped of line breaks.
 - Sample orbits never send real email and are deleted after 24 hours. Each orbit also has a daily email cap.
 - The container runs as a non-root user.
-- Dependencies are pinned and checked with `pip-audit` in CI (no known vulnerabilities on 2026-11-15), and Dependabot keeps them updated.
+- Dependencies are pinned and checked with `pip-audit` on every CI run (no known vulnerabilities on 2026-11-15).
 
 ## Accessibility
 

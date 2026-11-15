@@ -13,7 +13,7 @@ Orbit holds health information about a vulnerable person, so it is built to keep
 - **Secrets:** only in the host's environment (Render environment variables, or Secret Manager on Google Cloud), never in the repository.
 - **The AI:** Gemini never decides anything. It receives computed facts, its text is rejected if it adds a number, and the allowed note tags are a fixed list.
 - **Abuse limits:** sign-in and creation are rate-limited per address, each orbit has a daily email cap, and sample orbits never send email and are deleted after 24 hours.
-- **Dependencies:** pinned, checked with `pip-audit` in CI, and updated by Dependabot.
+- **Dependencies:** pinned, and checked for known vulnerabilities with `pip-audit` on every CI run.
 
 ## Reporting a problem
 
