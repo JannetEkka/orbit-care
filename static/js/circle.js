@@ -438,6 +438,7 @@
     source.textContent = "";
     source.append(el("span", { class: "spinner", "aria-hidden": "true" }), " Gemini is rewording this from the record…");
     document.getElementById("summary-text").classList.add("shimmer");
+    document.getElementById("summary-text").setAttribute("aria-busy", "true");
     api(`/api/summary?days=${days}`).then((written) => {
       if (request === summaryRequest) renderSummary(written);
     }).catch(() => {
@@ -448,6 +449,7 @@
   function renderSummary(result) {
     const f = result.facts;
     document.getElementById("summary-text").classList.toggle("shimmer", false);
+    document.getElementById("summary-text").removeAttribute("aria-busy");
     document.getElementById("summary-text").textContent = result.summary.text;
     document.getElementById("summary-source").textContent = result.summary.source === "gemini"
       ? "Written by Gemini from the numbers below, and checked: it contains no number that is not in the record."
@@ -466,7 +468,8 @@
   function renderTimeline(rows) {
     const body = clear(document.getElementById("timeline-body"));
     for (const row of rows) {
-      const dots = el("div", { class: "dots" }, row.doses.map((d) =>
+      const count = (state) => row.doses.filter((d) => d.state === state).length;
+      const dots = el("div", { class: "dots", role: "img", "aria-label": `${count("given")} given, ${count("missed")} missed, ${count("skipped")} skipped` }, row.doses.map((d) =>
         el("i", { class: d.state === "given" ? "" : d.state === "missed" ? "missed" : d.state === "skipped" ? "skipped" : "pending", title: `${d.time} ${d.name}: ${STATE_TEXT[d.state]}` })));
       const missed = row.doses.filter((d) => d.state === "missed").map((d) => `${d.time} ${d.name}`);
       body.append(el("tr", {},

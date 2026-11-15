@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from . import care, notify, rules, security
-from .auth import COOKIE, Auth, RateLimiter, client_of
+from .auth import Auth, RateLimiter, client_of
 from .care import Ctx
 from .demo import seed_demo
 from .models import (
@@ -94,7 +94,9 @@ def build_router(ctx: Ctx) -> APIRouter:
 
     @router.post("/api/logout")
     def logout(response: Response) -> dict:
-        response.delete_cookie(COOKIE, path="/")
+        response.delete_cookie(
+            auth.cookie, path="/", secure=ctx.settings.cookie_secure, httponly=True, samesite="strict"
+        )
         return {"ok": True}
 
     @router.post("/api/orbits", status_code=201)

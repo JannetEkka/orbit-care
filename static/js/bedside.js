@@ -208,7 +208,8 @@
     try {
       const result = await api("/api/help", { method: "POST" });
       help.classList.add("sent");
-      helpText.textContent = `Help is coming. ${result.told.length ? result.told.map((n) => n.split(" (")[0]).join(", ") : "Your family"} told.`;
+      const names = result.told.map((n) => n.split(" (")[0]);
+      helpText.textContent = names.length ? `Help is coming. ${names.join(", ")} told.` : "Help is coming. Your family has been told.";
       speak("Help is coming. Your family has been told.");
     } catch (e) {
       helpText.textContent = "Could not send. Use the call buttons below.";

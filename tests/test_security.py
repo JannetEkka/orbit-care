@@ -110,3 +110,26 @@ def test_static_files_are_compressed_and_cached(client):
     response = client.get("/static/css/orbit.css", headers={"accept-encoding": "gzip"})
     assert response.headers["content-encoding"] == "gzip"
     assert "max-age" in response.headers["cache-control"]
+
+
+def test_isolation_headers_are_set(client):
+    headers = client.get("/").headers
+    assert headers["cross-origin-opener-policy"] == "same-origin"
+    assert headers["cross-origin-resource-policy"] == "same-origin"
+    assert "max-age" in headers["strict-transport-security"]
+
+
+def test_production_cookie_uses_the_host_prefix(store, clock, mailer):
+    from fastapi.testclient import TestClient
+
+    from app.config import Settings
+    from app.main import create_app
+    from app.summary import Summariser
+
+    settings = Settings(secret_key="k" * 40, cookie_secure=True)
+    app = create_app(settings=settings, store=store, mailer=mailer, summariser=Summariser(""), clock=clock)
+    response = TestClient(app, base_url="https://testserver").post(
+        "/api/orbits", json={"elder_name": "A", "your_name": "B", "passcode": "482913"}, headers=HEADERS
+    )
+    cookie = response.headers["set-cookie"]
+    assert cookie.startswith("__Host-orbit_session=") and "Secure" in cookie and "Domain" not in cookie

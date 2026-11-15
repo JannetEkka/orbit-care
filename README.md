@@ -72,15 +72,18 @@ All numbers below come from our own runs on 2026-11-15.
 
 ## Security
 
-- Passcodes are hashed with salted scrypt and compared in constant time. Weak passcodes are refused, the orbit locks after 5 wrong tries, and sign-in and creation are rate-limited per address.
+Full details are in [SECURITY.md](SECURITY.md).
+
+- Passcodes are hashed with salted scrypt and compared in constant time. A keyed HMAC fingerprint finds the right person, so sign-in runs one slow hash, not one per member. Weak passcodes are refused, the orbit locks after 5 wrong tries, and sign-in and creation are rate-limited per address.
 - An unknown orbit code and a wrong passcode get the same answer, so a guesser learns nothing.
 - Every route checks the role. Doctors can only read. The bedside screen can only confirm a dose, answer "how are you" and press Help.
-- Cookies are HttpOnly, Secure and SameSite=Strict. Every state-changing request also needs a custom header, which blocks cross-site request forgery.
-- The Content-Security-Policy allows only the app's own scripts and styles; there is no inline script.
+- Cookies are HttpOnly, Secure and SameSite=Strict, with the `__Host-` prefix in production. Every state-changing request also needs a custom header, which blocks cross-site request forgery.
+- The Content-Security-Policy allows only the app's own scripts (no inline script) and Google Fonts. HSTS, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and same-origin COOP/CORP are set.
 - All server text is inserted into pages with `textContent`, never as HTML.
 - Request bodies are strict Pydantic models with length and pattern limits, and unknown fields are rejected. Email headers are stripped of line breaks.
 - Sample orbits never send real email and are deleted after 24 hours. Each orbit also has a daily email cap.
 - The container runs as a non-root user.
+- Dependencies are pinned and checked with `pip-audit` in CI (no known vulnerabilities on 2026-11-15), and Dependabot keeps them updated.
 
 ## Accessibility
 
@@ -97,8 +100,12 @@ All numbers below come from our own runs on 2026-11-15.
   - Empty states tell a new family what to do first.
   - The doctor's brief prints on one page, with doses and symptoms on the same day-by-day timeline.
 - Semantic HTML with labels on every field, a skip link, keyboard-navigable tabs (arrow keys), visible focus rings, and `aria-live` for updates.
-- High-contrast colours in both light and dark themes. The one accent colour (coral) always means "needs someone now".
-- Respects reduced motion. Works at phone width without sideways scrolling.
+- Every text colour meets WCAG AA contrast (4.5:1) in light, dark and bedside night mode. The one alarm colour (terracotta) always means "needs someone now". There is extra contrast for `prefers-contrast: more`, and Windows high-contrast mode is supported.
+- Animation stops entirely under `prefers-reduced-motion`. Pages work at phone width without sideways scrolling.
+- **Checked with axe-core 4.10** (WCAG 2.1 A/AA and best practice) on 18 page states on 2026-11-15, with **0 violations**:
+  - the landing page, the sample dialog, the 3-step start, an empty new circle, the add-medicine dialog;
+  - Today, Summary and People in light and dark;
+  - the bedside screen in light, dark and night.
 
 ## Run it locally
 
@@ -106,7 +113,8 @@ All numbers below come from our own runs on 2026-11-15.
 pip install -r requirements-dev.txt
 ORBIT_COOKIE_SECURE=0 ORBIT_INPROCESS_TICK=1 uvicorn app.main:app --reload --port 8080
 # open http://localhost:8080 and press "See a sample family"
-python -m pytest        # add ORBIT_TEST_DATABASE_URL=postgresql://... to run every test on PostgreSQL too
+python -m pytest --cov=app   # 106 tests; with ORBIT_TEST_DATABASE_URL=postgresql://... every API and storage test
+                             # also runs on PostgreSQL: 165 tests, 92% line coverage (2026-11-15)
 ```
 
 Without settings, data is kept in memory and emails stay in the in-app outbox. See `.env.example` for every setting.
@@ -139,7 +147,8 @@ app/        FastAPI app: rules.py (all decisions), api.py (routes and roles), se
             notify.py (emails exactly once), summary.py (Gemini, checked),
             store.py / store_postgres.py / store_firestore.py (one interface, three backends)
 static/     index.html (landing), circle.html (family, nurse, doctor), bedside.html (him)
-tests/      rules, security, API flows, storage contract, the model check
+tests/      rules, security, API flows, editing flows, every email kind, both email senders,
+            the storage contract on memory and PostgreSQL, the model check
 render.yaml Render Blueprint (free web service and PostgreSQL)
 deploy.sh   one-command Google Cloud deploy
 ```

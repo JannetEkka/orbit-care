@@ -18,6 +18,7 @@ from . import security
 from .care import Ctx
 
 COOKIE = "orbit_session"
+SECURE_COOKIE = "__Host-orbit_session"  # browsers only accept it over HTTPS, host-only, path /
 SESSION_TTL = {"elder": timedelta(days=30)}  # the bedside tablet stays signed in
 DEFAULT_TTL = timedelta(hours=12)
 MAX_TRACKED_CLIENTS = 5000
@@ -49,9 +50,14 @@ def client_of(request: Request) -> str:
     return forwarded.split(",")[0].strip() or (request.client.host if request.client else "?")
 
 
+def cookie_name(secure: bool) -> str:
+    return SECURE_COOKIE if secure else COOKIE
+
+
 class Auth:
     def __init__(self, ctx: Ctx) -> None:
         self._ctx = ctx
+        self.cookie = cookie_name(ctx.settings.cookie_secure)
 
     def start_session(self, response: Response, pid: str, member: dict) -> None:
         ttl = SESSION_TTL.get(member["role"], DEFAULT_TTL)
@@ -59,7 +65,7 @@ class Auth:
             {"pid": pid, "mid": member["id"]}, self._ctx.settings.secret_key, self._ctx.clock(), ttl
         )
         response.set_cookie(
-            COOKIE,
+            self.cookie,
             token,
             max_age=int(ttl.total_seconds()),
             httponly=True,
@@ -71,7 +77,7 @@ class Auth:
     def session(self, request: Request) -> dict:
         """The signed-in member, re-read from storage so removed members lose access."""
         ctx = self._ctx
-        payload = security.read_token(request.cookies.get(COOKIE, ""), ctx.settings.secret_key, ctx.clock())
+        payload = security.read_token(request.cookies.get(self.cookie, ""), ctx.settings.secret_key, ctx.clock())
         if not payload:
             raise HTTPException(401, "Please sign in.")
         profile = ctx.store.get_profile(payload["pid"])
