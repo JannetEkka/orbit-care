@@ -58,6 +58,20 @@ def hash_passcode(passcode: str) -> str:
     return f"scrypt${SCRYPT_N}${SCRYPT_R}${SCRYPT_P}${_b64(salt)}${_b64(digest)}"
 
 
+def passcode_key(passcode: str, pid: str, secret: str) -> str:
+    """A keyed fingerprint used only to find which member a passcode belongs to.
+
+    It lets sign-in run one slow scrypt check instead of one per member. Without the
+    server secret it cannot be brute-forced from a copy of the database.
+    """
+    return hmac.new(secret.encode(), f"{pid}:{passcode}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def candidates_for(members: list[dict], key: str) -> list[dict]:
+    """Members whose fingerprint matches, plus any older member saved without one."""
+    return [m for m in members if m.get("passcode_key") in (key, None)]
+
+
 def verify_passcode(passcode: str, stored: str) -> bool:
     try:
         scheme, n, r, p, salt_b64, digest_b64 = stored.split("$")

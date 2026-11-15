@@ -7,9 +7,12 @@ template is used instead. The app works fully with no model at all.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
+import threading
+from collections import OrderedDict
 
 import httpx
 
@@ -29,6 +32,7 @@ _TAG_WORDS = {
 _NUMBER = re.compile(r"\d+(?:[.:]\d+)?")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 MAX_SUMMARY_CHARS = 900
+CACHE_SIZE = 256
 
 
 def numbers_in(text: str) -> set[str]:
@@ -56,14 +60,31 @@ class Summariser:
         self._api_key = api_key
         self._model = model
         self._client = client or httpx.Client(timeout=timeout)
+        self._cache: OrderedDict[str, str] = OrderedDict()
+        self._lock = threading.Lock()
 
     @property
     def enabled(self) -> bool:
         return bool(self._api_key)
 
     def _generate(self, prompt: str) -> str | None:
+        """Ask Gemini once per distinct prompt; identical facts reuse the cached answer."""
         if not self.enabled:
             return None
+        digest = hashlib.sha256(prompt.encode()).hexdigest()
+        with self._lock:
+            if digest in self._cache:
+                self._cache.move_to_end(digest)
+                return self._cache[digest]
+        text = self._call(prompt)
+        if text:
+            with self._lock:
+                self._cache[digest] = text
+                while len(self._cache) > CACHE_SIZE:
+                    self._cache.popitem(last=False)
+        return text
+
+    def _call(self, prompt: str) -> str | None:
         try:
             response = self._client.post(
                 GEMINI_URL.format(model=self._model),

@@ -93,6 +93,7 @@ def seed_demo(ctx: Ctx) -> tuple[str, dict, dict]:
             "phone": "",
             "digest": True,
             "passcode_hash": security.hash_passcode(passcode),
+            "passcode_key": security.passcode_key(passcode, pid, ctx.settings.secret_key),
         }
         store.put(pid, "members", members[slot]["id"], members[slot])
 

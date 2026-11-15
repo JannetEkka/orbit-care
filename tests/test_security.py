@@ -93,3 +93,20 @@ def test_header_injection_is_stripped():
 
     assert "\n" not in _clean_header("Hello\r\nBcc: attacker@example.com")
     assert HEADERS["x-orbit"] == "1"
+
+
+def test_sign_in_runs_one_slow_hash_check(client, family, monkeypatch):
+    for i, code in enumerate(("750319", "640218", "593027")):
+        post(client, "/api/members", {"name": f"P{i}", "role": "family", "passcode": code})
+    checks = []
+    original = security.verify_passcode
+    monkeypatch.setattr(security, "verify_passcode", lambda p, s: checks.append(1) or original(p, s))
+    client.cookies.clear()
+    assert post(client, "/api/login", {"orbit_code": family["orbit_code"], "passcode": "640218"}).status_code == 200
+    assert len(checks) == 1
+
+
+def test_static_files_are_compressed_and_cached(client):
+    response = client.get("/static/css/orbit.css", headers={"accept-encoding": "gzip"})
+    assert response.headers["content-encoding"] == "gzip"
+    assert "max-age" in response.headers["cache-control"]

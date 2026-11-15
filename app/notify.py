@@ -115,8 +115,10 @@ def deliver(
     }
     if not ctx.store.create_if_absent(pid, "outbox", key, doc):
         return None
-    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    sent_today = len(ctx.store.list(pid, "outbox", field="created_at", lo=day_start))
+    today = now.date().isoformat()
+    sent_today = profile.get("emails_sent", 0) + 1 if profile.get("emails_day") == today else 1
+    profile.update(emails_day=today, emails_sent=sent_today)
+    ctx.store.update_profile(pid, {"emails_day": today, "emails_sent": sent_today})
     if profile.get("demo"):
         doc["detail"] = "Demo orbit: shown here, not sent to a real inbox."
     elif sent_today > ctx.settings.daily_email_cap:

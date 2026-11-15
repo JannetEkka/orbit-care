@@ -61,3 +61,16 @@ def test_brevo_mailer_sends_over_https():
     mailer = BrevoMailer("k", "orbit@example.com", client=httpx.Client(transport=httpx.MockTransport(handler)))
     assert mailer.send(["a@example.com"], "Hi\nBcc: x@example.com", "body") == (True, "")
     assert seen["key"] == "k" and "Bcc: x" in seen["body"] and "\\n" not in seen["body"].split("subject")[1][:40]
+
+
+def test_identical_facts_call_gemini_once():
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "38 of 45."}]}}]})
+
+    summariser = Summariser("k", client=httpx.Client(transport=httpx.MockTransport(handler)))
+    summariser.write("x", FACTS, "fallback")
+    summariser.write("x", FACTS, "fallback")
+    assert len(calls) == 1

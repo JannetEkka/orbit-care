@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import hmac
-import threading
-import time
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from . import care, notify, rules, security
+from .auth import COOKIE, Auth, RateLimiter, client_of
 from .care import Ctx
 from .demo import seed_demo
 from .models import (
@@ -25,9 +24,6 @@ from .models import (
     ProfileIn,
 )
 
-COOKIE = "orbit_session"
-SESSION_TTL = {"elder": timedelta(days=30)}
-DEFAULT_TTL = timedelta(hours=12)
 CAREGIVERS = ("family", "caretaker")
 READERS = ("family", "caretaker", "doctor")
 EVERYONE = ("family", "caretaker", "doctor", "elder")
@@ -36,69 +32,14 @@ HELP_COOLDOWN = timedelta(seconds=60)
 WRONG = "That orbit code and passcode do not match."
 
 
-class RateLimiter:
-    """At most `limit` calls per `window` seconds for each client address."""
-
-    def __init__(self, limit: int, window: float) -> None:
-        self._limit, self._window = limit, window
-        self._hits: dict[str, list[float]] = {}
-        self._lock = threading.Lock()
-
-    def check(self, client: str) -> None:
-        now = time.monotonic()
-        with self._lock:
-            hits = [t for t in self._hits.get(client, []) if now - t < self._window]
-            if len(hits) >= self._limit:
-                raise HTTPException(429, "Too many attempts. Please wait a minute.")
-            hits.append(now)
-            self._hits[client] = hits
-            if len(self._hits) > 5000:
-                self._hits.clear()
-
-
 def build_router(ctx: Ctx) -> APIRouter:
     router = APIRouter()
     store = ctx.store
     sign_in_limit = RateLimiter(limit=20, window=60)
     create_limit = RateLimiter(limit=6, window=60)
 
-    # ---------- session helpers ----------
-
-    def client_of(request: Request) -> str:
-        forwarded = request.headers.get("x-forwarded-for", "")
-        return forwarded.split(",")[0].strip() or (request.client.host if request.client else "?")
-
-    def start_session(response: Response, pid: str, member: dict) -> None:
-        ttl = SESSION_TTL.get(member["role"], DEFAULT_TTL)
-        token = security.make_token({"pid": pid, "mid": member["id"]}, ctx.settings.secret_key, ctx.clock(), ttl)
-        response.set_cookie(
-            COOKIE,
-            token,
-            max_age=int(ttl.total_seconds()),
-            httponly=True,
-            secure=ctx.settings.cookie_secure,
-            samesite="strict",
-            path="/",
-        )
-
-    def session(request: Request) -> dict:
-        """The signed-in member, re-read from storage so removed members lose access."""
-        payload = security.read_token(request.cookies.get(COOKIE, ""), ctx.settings.secret_key, ctx.clock())
-        if not payload:
-            raise HTTPException(401, "Please sign in.")
-        profile = store.get_profile(payload["pid"])
-        member = store.get(payload["pid"], "members", payload["mid"]) if profile else None
-        if not profile or not member:
-            raise HTTPException(401, "Please sign in.")
-        return {"pid": payload["pid"], "profile": profile, "member": member}
-
-    def allow(*roles: str):
-        def dependency(current: dict = Depends(session)) -> dict:
-            if current["member"]["role"] not in roles:
-                raise HTTPException(403, "Your role cannot do this.")
-            return current
-
-        return dependency
+    auth = Auth(ctx)
+    allow, start_session = auth.allow, auth.start_session
 
     def public_member(member: dict, with_email: bool) -> dict:
         shown = {k: member.get(k, "") for k in ("id", "name", "role", "phone")}
@@ -116,15 +57,17 @@ def build_router(ctx: Ctx) -> APIRouter:
         if len(store.list(pid, kind)) >= LIMITS[kind]:
             raise HTTPException(409, f"This orbit already has the most {kind} it can hold.")
 
-    def passcode_hash_for(pid: str, passcode: str, skip_id: str | None = None) -> str:
+    def passcode_fields(pid: str, passcode: str, skip_id: str | None = None) -> dict:
+        """Validated, unique passcode, stored as a slow hash plus a fast lookup key."""
         try:
             security.validate_passcode(passcode)
         except ValueError as error:
             raise HTTPException(422, str(error)) from error
-        for other in store.list(pid, "members"):
+        key = security.passcode_key(passcode, pid, ctx.settings.secret_key)
+        for other in security.candidates_for(store.list(pid, "members"), key):
             if other["id"] != skip_id and security.verify_passcode(passcode, other["passcode_hash"]):
                 raise HTTPException(422, "Please choose a different passcode.")
-        return security.hash_passcode(passcode)
+        return {"passcode_hash": security.hash_passcode(passcode), "passcode_key": key}
 
     # ---------- sign in, sign out, create ----------
 
@@ -138,8 +81,11 @@ def build_router(ctx: Ctx) -> APIRouter:
             raise HTTPException(401, WRONG)
         if security.is_locked(profile, now):
             raise HTTPException(423, "Too many wrong passcodes. Try again in 15 minutes.")
-        for member in store.list(body.orbit_code, "members"):
+        key = security.passcode_key(body.passcode, body.orbit_code, ctx.settings.secret_key)
+        for member in security.candidates_for(store.list(body.orbit_code, "members"), key):
             if security.verify_passcode(body.passcode, member["passcode_hash"]):
+                if member.get("passcode_key") != key:  # older record: add its lookup key
+                    store.put(body.orbit_code, "members", member["id"], {**member, "passcode_key": key})
                 store.update_profile(body.orbit_code, {"failed_attempts": 0, "locked_until": None})
                 start_session(response, body.orbit_code, member)
                 return {"role": member["role"], "name": member["name"]}
@@ -179,7 +125,7 @@ def build_router(ctx: Ctx) -> APIRouter:
             "email": body.your_email,
             "phone": "",
             "digest": True,
-            "passcode_hash": security.hash_passcode(body.passcode),
+            **passcode_fields(pid, body.passcode),
         }
         store.put(pid, "members", member["id"], member)
         care.audit(ctx, pid, member, "orbit created", f"for {body.elder_name}")
@@ -522,7 +468,7 @@ def build_router(ctx: Ctx) -> APIRouter:
             "email": body.email,
             "phone": body.phone,
             "digest": body.digest,
-            "passcode_hash": passcode_hash_for(pid, body.passcode),
+            **passcode_fields(pid, body.passcode),
         }
         store.put(pid, "members", doc["id"], doc)
         care.audit(ctx, pid, current["member"], "person added", f"{doc['name']} ({doc['role']})")
@@ -538,7 +484,7 @@ def build_router(ctx: Ctx) -> APIRouter:
             raise HTTPException(409, "You cannot remove your own family access.")
         existing.update(name=body.name, role=body.role, email=body.email, phone=body.phone, digest=body.digest)
         if body.passcode:
-            existing["passcode_hash"] = passcode_hash_for(pid, body.passcode, skip_id=member_id)
+            existing.update(passcode_fields(pid, body.passcode, skip_id=member_id))
         store.put(pid, "members", member_id, existing)
         care.audit(ctx, pid, current["member"], "person changed", f"{existing['name']} ({existing['role']})")
         return public_member(existing, with_email=True)

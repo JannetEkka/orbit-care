@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -94,7 +95,11 @@ def create_app(
             response.headers.setdefault(header, value)
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+        elif request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=3600"
         return response
+
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     @app.exception_handler(HTTPException)
     async def http_error(_: Request, error: HTTPException):
