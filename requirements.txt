@@ -2,5 +2,5 @@ fastapi==0.163.0
 uvicorn==0.54.0
 httpx==0.28.1
 google-cloud-firestore==2.34.1
-psycopg[binary]==3.2.13
+psycopg[binary]==3.3.9
 psycopg-pool==3.2.8
