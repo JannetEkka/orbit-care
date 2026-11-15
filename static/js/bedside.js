@@ -174,15 +174,19 @@
   const help = document.getElementById("help");
   const helpText = document.getElementById("help-text");
   let holdTimer = null;
+  let tickTimer = null;
   function startHold(event) {
     if (help.disabled || holdTimer) return;
     if (event.type === "pointerdown") help.setPointerCapture(event.pointerId);
     help.classList.add("holding");
     helpText.textContent = "Keep holding…";
     buzz(30);
+    let left = 2;
+    tickTimer = setInterval(() => { buzz(25); left -= 0.5; if (left > 0) helpText.textContent = `Keep holding… ${Math.ceil(left)}`; }, 500);
     holdTimer = setTimeout(sendHelp, HOLD_MS);
   }
   function cancelHold() {
+    clearInterval(tickTimer);
     if (!holdTimer) return;
     clearTimeout(holdTimer);
     holdTimer = null;
@@ -195,6 +199,7 @@
   help.addEventListener("contextmenu", (event) => event.preventDefault());
 
   async function sendHelp() {
+    clearInterval(tickTimer);
     holdTimer = null;
     help.classList.remove("holding");
     help.disabled = true;
@@ -246,8 +251,32 @@
   }
 
   api("/api/me").then((me) => {
-    document.getElementById("back").classList.toggle("hidden", me.member.role === "elder");
+    const back = document.getElementById("back");
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem("orbit_demo_codes") || "null"); } catch (_) { saved = null; }
+    if (me.member.role === "elder" && me.demo && saved && saved.code === me.orbit_code) {
+      back.textContent = "Back to the sample";
+      back.addEventListener("click", async (event) => {
+        event.preventDefault();
+        await api("/api/login", { method: "POST", body: { orbit_code: saved.code, passcode: saved.passcodes.wife } });
+        window.location.href = "/circle";
+      });
+    } else {
+      back.classList.toggle("hidden", me.member.role === "elder");
+    }
   }).catch(() => {});
+
+  // ---------- keep the screen awake on its stand ----------
+  let wakeLock = null;
+  async function keepAwake() {
+    try {
+      if ("wakeLock" in navigator && document.visibilityState === "visible") wakeLock = await navigator.wakeLock.request("screen");
+    } catch (_) { wakeLock = null; }
+    document.getElementById("awake").classList.toggle("hidden", Boolean(wakeLock));
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+  document.addEventListener("pointerdown", () => { if (!wakeLock) keepAwake(); }, { once: true });
+  keepAwake();
 
   setVoice(storageGet("orbit_voice") === "1");
   tickClock();

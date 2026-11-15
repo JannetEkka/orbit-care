@@ -103,6 +103,7 @@
       for (const [slot, code] of Object.entries(result.passcodes)) {
         box.append(el("span", { text: labels[slot] }), el("code", { text: code }));
       }
+      try { sessionStorage.setItem("orbit_demo_codes", JSON.stringify({ code: result.orbit_code, passcodes: result.passcodes })); } catch (_) { /* ignore */ }
       document.getElementById("demo-dialog").showModal();
     } catch (e) {
       Orbit.toast(e.message);
@@ -111,6 +112,12 @@
       button.textContent = original;
     }
   }
+  document.getElementById("demo-doctor").addEventListener("click", async () => {
+    const saved = JSON.parse(sessionStorage.getItem("orbit_demo_codes") || "null");
+    if (!saved) return;
+    await api("/api/login", { method: "POST", body: { orbit_code: saved.code, passcode: saved.passcodes.doctor } });
+    window.location.href = "/circle";
+  });
   document.getElementById("try-demo").addEventListener("click", openDemo);
   document.getElementById("try-demo-2").addEventListener("click", openDemo);
 
@@ -123,4 +130,13 @@
     document.getElementById("preview-clock").textContent = night ? "22:00" : "13:00";
   });
   for (const fill of document.querySelectorAll(".preview-fill")) fill.style.width = "18%";
+
+  // ---------- sections rise into view ----------
+  const reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window) {
+    const seen = new IntersectionObserver((entries) => {
+      for (const entry of entries) if (entry.isIntersecting) { entry.target.classList.add("in"); seen.unobserve(entry.target); }
+    }, { threshold: 0.12 });
+    reveals.forEach((section) => seen.observe(section));
+  } else reveals.forEach((section) => section.classList.add("in"));
 })();

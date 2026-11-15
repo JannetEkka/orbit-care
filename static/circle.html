@@ -20,7 +20,7 @@
     </a>
     <div class="row">
       <span class="muted small" id="whoami"></span>
-      <a class="btn btn-sm" href="/bedside" id="to-bedside">His bedside screen</a>
+      <a class="btn btn-sm" href="/bedside" id="to-bedside">Bedside screen</a>
       <button type="button" class="btn-sm" id="logout">Sign out</button>
     </div>
   </header>
@@ -121,7 +121,7 @@
           <div class="daygrid">
             <table>
               <caption class="sr-only">Doses, symptoms and mood for each day</caption>
-              <thead><tr><th scope="col">Day</th><th scope="col">Doses</th><th scope="col">Symptoms noted</th><th scope="col">How he felt</th></tr></thead>
+              <thead><tr><th scope="col">Day</th><th scope="col">Doses</th><th scope="col">Symptoms noted</th><th scope="col">How they felt</th></tr></thead>
               <tbody id="timeline-body"></tbody>
             </table>
           </div>
@@ -134,7 +134,7 @@
         </div>
         <div class="card no-print" id="request-card">
           <h3>Ask the doctor</h3>
-          <p class="muted small">Sends the doctor his current medicines, today's doses and recent notes with your request.</p>
+          <p class="muted small">Sends the doctor their current medicines, today's doses and recent notes with your request.</p>
           <form id="request-form" novalidate>
             <label for="req-msg">Message (optional)</label>
             <input id="req-msg" name="message" maxlength="120" placeholder="e.g. Tremor worse since Tuesday">
@@ -150,11 +150,11 @@
     <section id="tab-people" role="tabpanel" aria-labelledby="t-people" class="hidden">
       <div class="dash">
         <div class="card">
-          <div class="spread"><h2>People in his circle</h2><button type="button" class="btn-primary" id="add-person">Add person</button></div>
+          <div class="spread"><h2>People in the circle</h2><button type="button" class="btn-primary" id="add-person">Add person</button></div>
           <div id="people-list"></div>
         </div>
         <div class="card">
-          <h2>About him, contacts and rules</h2>
+          <h2>About them, contacts and rules</h2>
           <form id="profile-form" novalidate></form>
         </div>
       </div>

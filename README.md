@@ -4,7 +4,7 @@
 
 Built for **Catalyst: Solo AI Hackathon** (Makers Need More × PromptWars, Hack2skill), challenge *Elderly Care & Medication Management Platform*.
 
-**Live:** https://orbit-care.onrender.com (free Render instance: the first load after a quiet spell can take up to a minute) · **Try it:** open the live link and press **Open a sample family**. It creates a private sample with a week of history and shows the passcodes for each person, so you can see every view.
+**Live:** https://orbit-care.onrender.com (free Render instance: the first load after a quiet spell can take up to a minute) · **Try it:** open the live link and press **See a sample family**. It creates a private sample with a week of history. A bar at the bottom switches between the family, nurse, doctor and bedside views in one tap.
 
 ## Why it looks like this
 
@@ -105,7 +105,7 @@ All numbers below come from our own runs on 2026-11-15.
 ```bash
 pip install -r requirements-dev.txt
 ORBIT_COOKIE_SECURE=0 ORBIT_INPROCESS_TICK=1 uvicorn app.main:app --reload --port 8080
-# open http://localhost:8080 and press "Open a sample family"
+# open http://localhost:8080 and press "See a sample family"
 python -m pytest        # add ORBIT_TEST_DATABASE_URL=postgresql://... to run every test on PostgreSQL too
 ```
 

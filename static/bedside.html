@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f5f0">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Orbit · bedside</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +22,7 @@
     </div>
     <div class="top-actions">
       <span class="conn" id="conn" role="status">Connected to family</span>
+      <span class="conn off hidden" id="awake" title="This browser may let the screen sleep. Set the tablet's screen timeout to never.">Screen may sleep</span>
       <button id="repeat" type="button" class="btn-sm" aria-label="Say it again">🔊 Repeat</button>
       <button id="sound" type="button" class="btn-sm" aria-pressed="false">Turn on voice</button>
       <a class="btn btn-sm" href="/circle" id="back">Family view</a>

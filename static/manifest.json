@@ -1,0 +1,10 @@
+{
+  "name": "Orbit · bedside",
+  "short_name": "Orbit",
+  "start_url": "/bedside",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#f7f5f0",
+  "theme_color": "#1b3635",
+  "icons": [{ "src": "/static/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

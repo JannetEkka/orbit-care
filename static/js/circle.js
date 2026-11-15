@@ -8,6 +8,7 @@
   const STATE_TEXT = { given: "given", skipped: "skipped", missed: "not given", due: "due now", upcoming: "later" };
   const PARTS = [["morning", 5, 12], ["afternoon", 12, 17], ["evening", 17, 21], ["night", 21, 29]];
   const partOf = (hhmm) => { const h = Number(hhmm.slice(0, 2)); const hour = h < 5 ? h + 24 : h; return PARTS.find(([, a, b]) => hour >= a && hour < b)[0]; };
+  const who = () => (today && today.about && today.about.address_as) || (today && today.elder_name) || (me && me.elder_name) || "them";
   const memberById = (id) => (today && today.members.find((m) => m.id === id)) || null;
   const PHARMACIES = [
     ["Tata 1mg", (n) => `https://www.1mg.com/search/all?name=${encodeURIComponent(n)}`],
@@ -96,7 +97,7 @@
     const line = clear(document.getElementById("greet-line"));
     line.append(el("span", { class: "chip given", text: `${given} of ${total} doses given` }));
     if (open) line.append(el("span", { class: "chip missed", text: `${open} need${open === 1 ? "s" : ""} someone` }));
-    if (today.feeling) line.append(el("span", { class: today.feeling === "good" ? "chip given" : "chip missed", text: today.feeling === "good" ? "He said he feels good" : "He said he doesn't feel good" }));
+    if (today.feeling) line.append(el("span", { class: today.feeling === "good" ? "chip given" : "chip missed", text: today.feeling === "good" ? `${who()} said: feeling good` : `${who()} said: not feeling good` }));
   }
 
   function renderDoses() {
@@ -177,7 +178,7 @@
     for (const dose of today.doses.filter((d) => d.state === "missed" || d.state === "due")) {
       items.push(alertItem("!", "", `${dose.time} ${dose.name} ${STATE_TEXT[dose.state]}`, `${(memberById(dose.giver_id) || {}).name || "Anyone in the family"} gives it`));
     }
-    if (today.feeling === "not_good") items.push(alertItem("☹", "amber", "He said he doesn't feel good today", "Consider a call or a care note."));
+    if (today.feeling === "not_good") items.push(alertItem("☹", "amber", `${who()} said they don't feel good today`, "Consider a call or a care note."));
     const warn = (today.settings && today.settings.refill_warn_days) || 5;
     for (const w of today.refill) items.push(alertItem("💊", "amber", `${w.name}: about ${w.days_left} days left`, `${w.stock} tablets in hand`, supplyBar(w.days_left, warn)));
     for (const c of today.checkups) {
@@ -190,7 +191,7 @@
       box.append(el("h3", { class: "block", text: "Coming up" }));
       for (const a of today.upcoming_appointments) {
         const goer = memberById(a.accompany_id);
-        box.append(alertItem("📅", "sage", a.doctor, `${fmtTime(a.when)}${goer ? ` · ${goer.name} goes with him` : " · nobody assigned yet"}`));
+        box.append(alertItem("📅", "sage", a.doctor, `${fmtTime(a.when)}${goer ? ` · ${goer.name} goes along` : " · nobody assigned to go yet"}`));
       }
     }
   }
@@ -226,10 +227,10 @@
     const a = today.about || {};
     box.append(el("h2", { text: `About ${a.address_as || today.elder_name}` }));
     if (!a.likes && !a.calms && !a.notes) {
-      box.append(el("p", { class: "muted", text: "Tell every new nurse who he is: what he likes and what calms him. Add it under People & settings." }));
+      box.append(el("p", { class: "muted", text: "Tell every new nurse who they are: what they like and what calms them. Add it under People & settings." }));
       return;
     }
-    const rows = [["Likes", a.likes], ["What calms him", a.calms], ["Good to know", a.notes]].filter(([, v]) => v);
+    const rows = [["Likes", a.likes], ["What calms them", a.calms], ["Good to know", a.notes]].filter(([, v]) => v);
     box.append(el("dl", {}, rows.flatMap(([k, v]) => [el("dt", {}, el("strong", { text: k })), el("dd", { text: v })])));
   }
 
@@ -312,7 +313,7 @@
       ...field("med-name", "Medicine name", el("input", { name: "name", value: m.name, maxlength: 80, required: true })),
       ...field("med-dose", "Dose (e.g. 5 mg)", el("input", { name: "dose", value: m.dose, maxlength: 120 })),
       ...field("med-inst", "How to give it", el("input", { name: "instructions", value: m.instructions, maxlength: 120, placeholder: "e.g. after food" })),
-      ...field("med-colour", "Tablet colour (shown on his screen)", el("select", { name: "colour" }, COLOURS.map((c) => el("option", { value: c, selected: c === m.colour }, c)))),
+      ...field("med-colour", "Tablet colour (shown on the bedside screen)", el("select", { name: "colour" }, COLOURS.map((c) => el("option", { value: c, selected: c === m.colour }, c)))),
       slotBox,
       el("button", { type: "button", onclick: () => addSlot({ time: "20:00", giver_id: null }) }, "Add another time"),
       ...field("med-stock", "Tablets in hand (for refill alerts)", el("input", { type: "number", name: "stock", min: 0, max: 10000, value: m.stock ?? "" })),
@@ -349,7 +350,7 @@
     for (const checkup of today.checkups) {
       box.append(el("p", { class: "notice" }, `${checkup.doctor}: regular checkup ${checkup.overdue ? "overdue since" : "due"} ${checkup.next_due}. Nothing is booked.`));
     }
-    if (!appts.length) box.append(emptyState("No visits yet. Add the next doctor's visit, and who goes with him.", "Add a visit", () => visitDialog(null)));
+    if (!appts.length) box.append(emptyState("No visits yet. Add the next doctor's visit, and who goes along.", "Add a visit", () => visitDialog(null)));
     const nowIso = today.now;
     for (const appt of appts.slice().reverse()) {
       const past = appt.when < nowIso;
@@ -362,7 +363,7 @@
         el("div", { class: "small muted" },
           past ? "Past visit" : "Coming up",
           appt.purpose ? ` · ${appt.purpose}` : "",
-          appt.accompany_id ? ` · going with him: ${memberName(appt.accompany_id)}` : " · nobody assigned to go with him",
+          appt.accompany_id ? ` · going along: ${memberName(appt.accompany_id)}` : " · nobody assigned to go along",
           appt.repeat_days ? ` · repeats every ${appt.repeat_days} days` : ""),
         el("div", { class: "row small" },
           appt.clinic_phone ? el("a", { href: telLink(appt.clinic_phone) }, `Call clinic ${appt.clinic_phone}`) : null,
@@ -381,7 +382,7 @@
       text: `${today.elder_name}: ${appt.doctor}`,
       dates: `${start}/${end}`,
       ctz: (today.settings && today.settings.timezone) || "Asia/Kolkata",
-      details: [appt.purpose, appt.accompany_id ? `Going with him: ${memberName(appt.accompany_id)}` : ""].filter(Boolean).join("\n"),
+      details: [appt.purpose, appt.accompany_id ? `Going along: ${memberName(appt.accompany_id)}` : ""].filter(Boolean).join("\n"),
     });
     return `https://calendar.google.com/calendar/render?${params}`;
   }
@@ -393,7 +394,7 @@
       ...field("ap-when", "Date and time", el("input", { type: "datetime-local", name: "when", value: a.when ? a.when.slice(0, 16) : "", required: true })),
       ...field("ap-purpose", "For", el("input", { name: "purpose", value: a.purpose, maxlength: 120 })),
       ...field("ap-phone", "Clinic phone", el("input", { type: "tel", name: "clinic_phone", value: a.clinic_phone, maxlength: 20 })),
-      ...field("ap-with", "Who goes with him", el("select", { name: "accompany_id" }, memberOptions(a.accompany_id, ["family", "caretaker"]))),
+      ...field("ap-with", "Who goes along", el("select", { name: "accompany_id" }, memberOptions(a.accompany_id, ["family", "caretaker"]))),
       ...field("ap-repeat", "Regular checkup: repeat every (days, optional)", el("input", { type: "number", name: "repeat_days", min: 1, max: 730, value: a.repeat_days ?? "" })),
     ], async (form) => {
       const body = formData(form);
@@ -433,7 +434,10 @@
     const result = await api(`/api/summary?days=${days}&write=false`);
     if (request !== summaryRequest) return;
     renderSummary(result);
-    document.getElementById("summary-source").textContent = "Gemini is rewording this from the record…";
+    const source = document.getElementById("summary-source");
+    source.textContent = "";
+    source.append(el("span", { class: "spinner", "aria-hidden": "true" }), " Gemini is rewording this from the record…");
+    document.getElementById("summary-text").classList.add("shimmer");
     api(`/api/summary?days=${days}`).then((written) => {
       if (request === summaryRequest) renderSummary(written);
     }).catch(() => {
@@ -443,6 +447,7 @@
 
   function renderSummary(result) {
     const f = result.facts;
+    document.getElementById("summary-text").classList.toggle("shimmer", false);
     document.getElementById("summary-text").textContent = result.summary.text;
     document.getElementById("summary-source").textContent = result.summary.source === "gemini"
       ? "Written by Gemini from the numbers below, and checked: it contains no number that is not in the record."
@@ -509,7 +514,7 @@
       ...field("p-pass", person ? "New passcode (leave empty to keep)" : "Passcode for them (6–12 digits)",
         el("input", { type: "password", name: "passcode", inputmode: "numeric", maxlength: 12, autocomplete: "new-password" })),
       el("label", {}, el("input", { type: "checkbox", name: "digest", checked: p.digest !== false }), " Send the evening update"),
-      el("p", { class: "muted small", text: "For the bedside screen choose the role 'Bedside screen' and sign in once on his tablet with that passcode." }),
+      el("p", { class: "muted small", text: "For the bedside screen choose the role 'Bedside screen' and sign in once on the bedside tablet with that passcode." }),
     ], async (form) => {
       const body = formData(form);
       if (!body.passcode) body.passcode = null;
@@ -531,11 +536,11 @@
     const a = today.about || {}, c = today.contacts || {}, s = today.settings || {};
     const input = (id, name, labelText, value, extra = {}) => field(id, labelText, el("input", { name, value: value ?? "", ...extra }));
     form.append(
-      ...input("pf-elder", "elder_name", "His name", today.elder_name, { maxlength: 80, required: true }),
-      el("fieldset", {}, el("legend", { text: "About him (shown to every new nurse)" }),
-        ...input("pf-as", "about.address_as", "What he likes to be called", a.address_as, { maxlength: 120 }),
-        ...field("pf-likes", "What he likes", el("textarea", { name: "about.likes", maxlength: 500 }, a.likes || "")),
-        ...field("pf-calms", "What calms him", el("textarea", { name: "about.calms", maxlength: 500 }, a.calms || "")),
+      ...input("pf-elder", "elder_name", "Their name", today.elder_name, { maxlength: 80, required: true }),
+      el("fieldset", {}, el("legend", { text: "About them (shown to every new nurse)" }),
+        ...input("pf-as", "about.address_as", "What they like to be called", a.address_as, { maxlength: 120 }),
+        ...field("pf-likes", "What they like", el("textarea", { name: "about.likes", maxlength: 500 }, a.likes || "")),
+        ...field("pf-calms", "What calms them", el("textarea", { name: "about.calms", maxlength: 500 }, a.calms || "")),
         ...field("pf-notes", "Good to know", el("textarea", { name: "about.notes", maxlength: 500 }, a.notes || ""))),
       el("fieldset", {}, el("legend", { text: "Contacts" }),
         ...input("pf-chem", "contacts.chemist_name", "Chemist", c.chemist_name, { maxlength: 120 }),
@@ -589,7 +594,7 @@
     const rows = await api("/api/audit");
     const box = clear(document.getElementById("audit-list"));
     box.append(el("table", {},
-      el("caption", { class: "sr-only", text: "Changes to his care, newest first" }),
+      el("caption", { class: "sr-only", text: "Changes to their care, newest first" }),
       el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "When" }), el("th", { scope: "col", text: "Who" }), el("th", { scope: "col", text: "What" }))),
       el("tbody", {}, rows.map((r) => el("tr", {},
         el("td", { text: fmtTime(r.at) }), el("td", { text: `${r.by_name} (${r.by_role})` }), el("td", { text: `${r.action}: ${r.detail}` }))))));
@@ -620,6 +625,26 @@
   document.getElementById("print-brief").addEventListener("click", () => window.print());
   document.getElementById("day-pick").addEventListener("change", () => loadToday().catch((e) => toast(e.message)));
 
+  function buildSwitcher() {
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem("orbit_demo_codes") || "null"); } catch (_) { saved = null; }
+    if (!saved || saved.code !== me.orbit_code) return;
+    const views = [["wife", "Mary · family"], ["nurse", "Latha · nurse"], ["doctor", "Dr. Rao · doctor"], ["bedside", "Bedside screen"]];
+    const bar = el("nav", { class: "switcher", "aria-label": "Switch sample view" }, el("span", { class: "label", text: "Sample: view as" }));
+    for (const [slot, text] of views) {
+      const current = (slot === "wife" && me.member.name.startsWith("Mary")) || (slot === "nurse" && me.member.role === "caretaker") || (slot === "doctor" && me.member.role === "doctor");
+      bar.append(el("button", {
+        type: "button", "aria-current": current ? "true" : null, class: current ? "on" : "",
+        onclick: async () => {
+          await api("/api/login", { method: "POST", body: { orbit_code: saved.code, passcode: saved.passcodes[slot] } });
+          try { sessionStorage.removeItem("orbit_tab"); } catch (_) { /* ignore */ }
+          window.location.href = slot === "bedside" ? "/bedside" : "/circle";
+        },
+      }, text));
+    }
+    document.body.append(bar);
+  }
+
   async function start() {
     me = await api("/api/me");
     if (me.member.role === "elder") { window.location.href = "/bedside"; return; }
@@ -634,9 +659,11 @@
     }
     buildTabs();
     buildTagPicker();
+    if (me.demo) buildSwitcher();
     let first = me.member.role === "doctor" ? "summary" : "today";
     try { first = sessionStorage.getItem("orbit_tab") || first; } catch (_) { /* ignore */ }
     if (!document.getElementById(`t-${first}`)) first = "today";
+    if (first !== "today") loadToday().catch(() => {});
     showTab(first);
   }
   start().catch((e) => toast(e.message));

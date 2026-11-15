@@ -3,8 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Orbit · care that circles around him</title>
-  <meta name="description" content="Orbit keeps a very unwell parent at the centre: a one-button bedside screen for him, and a shared care circle for family, nurse and doctor.">
+  <title>Orbit · care that circles around your parent</title>
+  <meta name="description" content="Orbit keeps a very unwell parent at the centre: a one-button bedside screen for them, and a shared care circle for family, nurse and doctor.">
+  <meta property="og:title" content="Orbit · care that circles around your parent">
+  <meta property="og:description" content="A one-button bedside screen for a very unwell parent, and one shared record for family, nurse and doctor.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://orbit-care.onrender.com/static/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#1b3635">
+  <link rel="manifest" href="/static/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
@@ -20,6 +27,7 @@
       Orbit
     </a>
     <nav class="nav" aria-label="Main">
+      <a class="btn btn-ghost hide-sm" href="#why">Why Orbit</a>
       <a class="btn btn-ghost hide-sm" href="#how">How it works</a>
       <button type="button" class="btn" data-open="signin-dialog">Sign in</button>
     </nav>
@@ -29,8 +37,8 @@
     <section class="hero" aria-labelledby="headline">
       <div>
         <p class="eyebrow">For families caring for a very unwell parent</p>
-        <h1 id="headline">Care that circles around him.</h1>
-        <p class="lede">He gets one big button by his bed. His family, nurse and doctor share everything else: who gives each dose, what was missed, how he is, and who to call.</p>
+        <h1 id="headline">Care that circles around your parent.</h1>
+        <p class="lede">Your mother or father gets one big button by the bed. Family, nurse and doctor share everything else: who gives each dose, what was missed, how they are, and who to call.</p>
         <div class="hero-actions">
           <button id="try-demo" class="btn btn-primary" type="button">See a sample family</button>
           <button type="button" class="btn" data-open="start-dialog">Start your own circle</button>
@@ -38,7 +46,7 @@
         <p class="muted small">The sample has a week of history. It is private to you, sends no real email, and is deleted after 24 hours.</p>
       </div>
 
-      <div class="devices" aria-label="Orbit on his bedside tablet and on a family member's phone">
+      <div class="devices" aria-label="Orbit on a bedside tablet and on a family member's phone">
         <div class="tablet" id="preview-tablet" aria-hidden="true">
           <div class="screen">
             <div class="top"><span class="clock" id="preview-clock">13:00</span><span class="status">Connected to family</span></div>
@@ -55,7 +63,7 @@
           <span class="notch"></span>
           <div class="screen">
             <div class="ptitle">Papa's circle</div>
-            <div class="alert"><strong>18:00 Levodopa not given</strong>Sister Latha reminded 18:30 · family told 19:00</div>
+            <div class="alert"><strong>18:00 Levodopa not given</strong> <span>Sister Latha reminded 18:30 · family told 19:00</span></div>
             <div class="ring">
               <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#e2dccf" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#3f7a5a" stroke-width="4" stroke-dasharray="79 95" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1b3635">84%</text></svg>
               <span>Doses given this week. Evenings are weakest.</span>
@@ -70,7 +78,7 @@
       </div>
     </section>
 
-    <section class="section" aria-labelledby="moments-title">
+    <section class="section reveal" id="why" aria-labelledby="moments-title">
       <div class="section-head">
         <p class="eyebrow">Why Orbit exists</p>
         <h2 id="moments-title">The questions families ask every day</h2>
@@ -88,13 +96,13 @@
         </article>
         <article class="moment">
           <div class="ico" aria-hidden="true">💊</div>
-          <p class="q">"We ran out of his Levodopa on Sunday."</p>
+          <p class="q">"We ran out of Amma's Levodopa on Sunday."</p>
           <p class="a">Orbit counts down the tablets with each dose given. When about 5 days are left, the family gets an email with one-tap links to the chemist and online pharmacies.</p>
         </article>
       </div>
     </section>
 
-    <section class="section" id="how" aria-labelledby="how-title">
+    <section class="section reveal" id="how" aria-labelledby="how-title">
       <div class="section-head">
         <p class="eyebrow">How it works</p>
         <h2 id="how-title">A safety net that tightens, one step at a time</h2>
@@ -104,49 +112,51 @@
         <li class="node">
           <div class="dot">−15m</div>
           <div class="when">Before the dose</div>
-          <div class="who"><span class="avatar av-2" title="Nurse">SL</span></div>
+          <div class="who"><span class="avatar av-2" title="Sister Latha, the nurse who gives this dose">SL</span></div>
           <p>The person giving it gets an email.</p>
         </li>
         <li class="node">
           <div class="dot">0</div>
           <div class="when">Dose time</div>
-          <div class="who"><span class="avatar av-0" title="Him">P</span></div>
-          <p>His screen speaks and becomes one button. One tap confirms it.</p>
+          <div class="who"><span class="avatar av-0" title="Papa, at the bedside">P</span></div>
+          <p>The bedside screen speaks and becomes one button. One tap confirms it.</p>
         </li>
         <li class="node">
           <div class="dot">+30m</div>
           <div class="when">Not marked</div>
-          <div class="who"><span class="avatar av-2" title="Nurse">SL</span></div>
+          <div class="who"><span class="avatar av-2" title="Sister Latha is reminded">SL</span></div>
           <p>The giver is reminded.</p>
         </li>
         <li class="node">
           <div class="dot">+60m</div>
           <div class="when">Still not marked</div>
-          <div class="who"><span class="avatar av-1" title="Wife">M</span><span class="avatar av-3" title="Son">A</span></div>
+          <div class="who"><span class="avatar av-1" title="Mary, his wife">M</span><span class="avatar av-3" title="Arun, his son">A</span></div>
           <p>The whole family is told.</p>
         </li>
       </ol>
     </section>
 
-    <section class="section" aria-labelledby="roles-title">
+    <section class="section reveal" aria-labelledby="roles-title">
       <div class="section-head">
         <p class="eyebrow">One profile, three views</p>
-        <h2 id="roles-title">Built around him, shared by everyone who cares</h2>
+        <h2 id="roles-title">Built around one person, shared by everyone who cares</h2>
       </div>
       <div class="roles">
         <article class="card role him">
-          <h3>For him: the bedside screen</h3>
+          <h3>For your parent: the bedside screen</h3>
           <ul>
             <li>No reading, no typing. At dose time it speaks, and the whole screen is one button.</li>
             <li>Help needs a 2-second hold, so a brushing hand doesn't raise an alarm.</li>
             <li>One picture question a day: how are you feeling?</li>
-            <li>Turns warm amber at night, so it doesn't wake him.</li>
+            <li>Turns warm amber at night, so it doesn't disturb their sleep.</li>
+            <li>Stays awake on its stand, so it never sleeps through a dose.</li>
           </ul>
         </article>
         <article class="card role circle">
           <h3>For family and nurse</h3>
           <ul>
             <li>Each person has their own passcode and role.</li>
+            <li><strong>"About them"</strong>: what they like and what calms them, the first thing a new nurse sees.</li>
             <li>Doses are grouped by morning, afternoon, evening and night, each with the person who gives it.</li>
             <li>Refill bars, checkup reminders and an evening update.</li>
             <li>Call the ambulance, hospital or doctor in one tap.</li>
@@ -158,16 +168,16 @@
             <li>Read-only access.</li>
             <li>A printable brief: adherence by medicine and time of day.</li>
             <li>Missed doses and symptoms on one timeline, day by day.</li>
-            <li>Call and home-visit requests arrive with his current medicines.</li>
+            <li>Call and home-visit requests arrive with their current medicines.</li>
           </ul>
         </article>
       </div>
     </section>
 
-    <section class="section" aria-label="Get started">
+    <section class="section reveal" aria-label="Get started">
       <div class="cta-band">
         <div>
-          <h2>See a week in Papa's circle</h2>
+          <h2>See a week in one family's circle</h2>
           <p>Every role, real reminders and a doctor's brief, in a private sample.</p>
         </div>
         <div class="row">
@@ -179,7 +189,10 @@
   </main>
 
   <footer>
-    Orbit is a prototype built for the Catalyst hackathon. It does not replace medical advice or emergency services. In an emergency, call 112.
+    <div class="spread">
+      <span><strong class="serif">Orbit</strong> · calm care coordination for families. It does not replace medical advice or emergency services. In an emergency, call 112 (ambulance 108).</span>
+      <span><a href="https://github.com/JannetEkka/orbit-care">Source code</a> · <a href="https://github.com/JannetEkka/orbit-care#security">Security</a></span>
+    </div>
   </footer>
 </div>
 
@@ -210,9 +223,9 @@
 
     <div data-step="1">
       <h3>Who are we caring for?</h3>
-      <label for="start-elder">His or her name</label>
-      <input id="start-elder" name="elder_name" placeholder="e.g. Mr. Thomas" maxlength="80" required>
-      <p class="hint">You can add what he likes to be called later, such as "Papa".</p>
+      <label for="start-elder">Their name</label>
+      <input id="start-elder" name="elder_name" placeholder="e.g. Mrs. Rao or Mr. Thomas" maxlength="80" required>
+      <p class="hint">Later you can add what they like to be called, such as "Amma" or "Papa".</p>
     </div>
     <div data-step="2" class="hidden">
       <h3>You lead the circle</h3>
@@ -249,12 +262,13 @@
     <h2 id="demo-title">Papa's circle is ready</h2>
     <button type="button" class="close btn-ghost" data-close aria-label="Close">✕</button>
   </div>
-  <p>You are signed in as <strong>Mary, his wife</strong>. Orbit code <code class="bigcode" id="demo-code"></code></p>
-  <p class="muted small">To see someone else's view, sign out and sign in with their passcode:</p>
+  <p>This sample is Papa (Mr. Thomas), who has Parkinson's. You are signed in as <strong>Mary, his wife</strong>. Orbit code <code class="bigcode" id="demo-code"></code></p>
+  <p class="muted small">Switch between every view in one tap from the bar at the bottom of the sample. The passcodes, if you want them:</p>
   <div class="codes" id="demo-codes"></div>
   <div class="form-actions">
     <a class="btn btn-primary" href="/circle">Open Mary's view</a>
-    <a class="btn" href="/bedside">See his bedside screen</a>
+    <a class="btn" href="/bedside">See Papa's bedside screen</a>
+    <button type="button" class="btn" id="demo-doctor">See the doctor's brief</button>
   </div>
 </dialog>
 
