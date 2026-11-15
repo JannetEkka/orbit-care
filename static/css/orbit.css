@@ -150,6 +150,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 24px; text-align: center;
 }
 .take .pill-dot { width: 64px; height: 64px; border: 3px solid #fff; }
+.take .prompt { font-size: clamp(1.2rem, 4vw, 1.9rem); font-weight: 600; }
 .take .med { font-size: clamp(1.6rem, 6vw, 3rem); font-weight: 700; }
 .take .cta { font-size: clamp(1.4rem, 5vw, 2.4rem); background: #fff; color: var(--accent); border-radius: 18px; padding: .6rem 1.4rem; font-weight: 700; }
 .rest { flex: 1; border-radius: 28px; background: var(--card); border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: .6rem; padding: 24px; }

@@ -1,0 +1,27 @@
+name: reminder-tick
+
+# Render's free plan has no scheduler, so GitHub Actions calls the reminder check.
+# It also wakes the free instance. Repository secrets needed: ORBIT_URL, ORBIT_TICK_TOKEN.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run the reminder rules
+        env:
+          ORBIT_URL: ${{ secrets.ORBIT_URL }}
+          ORBIT_TICK_TOKEN: ${{ secrets.ORBIT_TICK_TOKEN }}
+        run: |
+          if [ -z "$ORBIT_URL" ] || [ -z "$ORBIT_TICK_TOKEN" ]; then
+            echo "ORBIT_URL or ORBIT_TICK_TOKEN is not set; skipping."
+            exit 0
+          fi
+          curl -fsS --retry 3 --retry-delay 20 --max-time 90 -X POST \
+            -H "X-Tick-Token: $ORBIT_TICK_TOKEN" "$ORBIT_URL/tasks/tick"

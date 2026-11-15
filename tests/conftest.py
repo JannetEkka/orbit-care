@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -53,9 +54,23 @@ def mailer() -> FakeMailer:
     return FakeMailer()
 
 
-@pytest.fixture
-def store() -> MemoryStore:
-    return MemoryStore()
+_PG_URL = os.environ.get("ORBIT_TEST_DATABASE_URL", "")
+STORES = ["memory", "postgres"] if _PG_URL else ["memory"]
+
+
+@pytest.fixture(params=STORES)
+def store(request):
+    """Every API test runs on the in-memory store, and on PostgreSQL when one is available."""
+    if request.param == "memory":
+        yield MemoryStore()
+        return
+    from app.store_postgres import PostgresStore
+
+    pg = PostgresStore(_PG_URL)
+    with pg._pool.connection() as conn:
+        conn.execute("TRUNCATE orbit_docs, orbit_profiles")
+    yield pg
+    pg.close()
 
 
 @pytest.fixture

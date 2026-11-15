@@ -39,18 +39,18 @@ So Orbit has two very different sides:
 ## How it works
 
 ```
- Bedside screen ─┐                         ┌─ Firestore (one document per elder,
- Family / nurse ─┼─► Cloud Run (FastAPI) ──┤   with sub-collections)
- Doctor (read) ──┘        ▲                └─ Gemini (words only, checked)
-                          │ every 5 min
-                   Cloud Scheduler ──► /tasks/tick ──► Gmail SMTP
+ Bedside screen ─┐                          ┌─ PostgreSQL (Render) or Firestore (Google Cloud)
+ Family / nurse ─┼─► FastAPI web service ───┤
+ Doctor (read) ──┘          ▲               └─ Gemini API (words only, checked)
+                            │ every 5 min
+   GitHub Actions schedule  ┘ (or Cloud Scheduler) ──► /tasks/tick ──► email (Brevo API or SMTP)
 ```
 
-1. **One Python service on Cloud Run** serves the three screens and the API.
-2. **Firestore** holds each elder's profile, people, medicines, doses, visits, notes, feelings, outbox and history. Passcodes are stored only as hashes.
-3. **Cloud Scheduler** calls `/tasks/tick` every five minutes with a secret header. **Fixed rules** in `app/rules.py` decide what is due, what is missed and who is told. Every email has a stable key and is created only once, so a repeated tick never sends it twice.
+1. **One Python service** serves the three screens and the API. It runs on Render's free plan (`render.yaml`) or on Google Cloud Run (`deploy.sh`).
+2. **One storage interface with three backends:** PostgreSQL on Render, Firestore on Google Cloud, and in-memory storage for local runs. Every test runs against memory and against a real PostgreSQL. Storage holds each elder's profile, people, medicines, doses, visits, notes, feelings, outbox and history. Passcodes are stored only as hashes.
+3. **A schedule calls `/tasks/tick` every five minutes** with a secret header: a GitHub Actions workflow on Render (`.github/workflows/tick.yml`), or Cloud Scheduler on Google Cloud. **Fixed rules** in `app/rules.py` decide what is due, what is missed and who is told. Every email has a stable key and is created only once, so a repeated tick never sends it twice.
 4. **Gemini only writes words**: the evening update for the family, the summary before a doctor's visit, and tags suggested from a free-text care note. Every number comes from code. If the model's text contains a number that is not in the facts it was given, the text is thrown away and a plain template is used. The same happens when the model is slow or down, so the app works fully without it.
-5. **Secrets** (session key, scheduler token, Gemini key, Gmail app password) live in **Secret Manager**. None are in the repository.
+5. **Secrets** (session key, scheduler token, Gemini key, email key) live in the host's environment settings: Render environment variables, or Secret Manager on Google Cloud. None are in the repository.
 
 "Let the model describe, let deterministic code decide."
 
@@ -65,14 +65,10 @@ All numbers below come from our own runs on 2026-11-15.
 
 ## Google services used
 
-- **Cloud Run** hosts the app.
-- **Firestore** stores the data.
-- **Cloud Scheduler** runs the reminder checks.
-- **Secret Manager** holds the secrets.
-- **Cloud Build** builds the container from source.
-- **Gemini API** (`gemini-3.1-flash-lite`) writes the summaries and suggests note tags.
+- **Gemini API** (`gemini-3.1-flash-lite`) writes the summaries and suggests note tags, and its text is checked before it is shown.
 - **Google Maps** links find nearby pharmacies and hospitals.
 - **Google Calendar** links add visits to a calendar.
+- **Google Cloud deploy path** (`deploy.sh`): Cloud Run, Firestore (`app/store_firestore.py`, tested against the Firestore emulator), Cloud Scheduler, Secret Manager and Cloud Build.
 
 ## Security
 
@@ -99,10 +95,19 @@ All numbers below come from our own runs on 2026-11-15.
 pip install -r requirements-dev.txt
 ORBIT_COOKIE_SECURE=0 ORBIT_INPROCESS_TICK=1 uvicorn app.main:app --reload --port 8080
 # open http://localhost:8080 and press "Open a sample family"
-python -m pytest        # 52 tests
+python -m pytest        # add ORBIT_TEST_DATABASE_URL=postgresql://... to run every test on PostgreSQL too
 ```
 
 Without settings, data is kept in memory and emails stay in the in-app outbox. See `.env.example` for every setting.
+
+## Deploy on Render (free)
+
+1. Render → **New → Blueprint** → pick this repository. `render.yaml` creates a free web service and a free PostgreSQL database.
+2. Fill in the values it asks for:
+   - `ORBIT_TICK_TOKEN`: any long random string.
+   - `GEMINI_API_KEY`: optional; without it, summaries use the plain template.
+   - `BREVO_API_KEY` and `MAIL_FROM`: optional; needed for real emails. Render's free plan blocks outgoing SMTP, so email goes over Brevo's HTTPS API.
+3. In GitHub → Settings → Secrets and variables → Actions, add `ORBIT_URL` (the Render URL) and the same `ORBIT_TICK_TOKEN`. The `reminder-tick` workflow then runs the reminder rules every 5 minutes.
 
 ## Deploy to Google Cloud
 
@@ -120,9 +125,11 @@ In Google Cloud Shell, from this folder: `gcloud config set project YOUR_PROJECT
 
 ```
 app/        FastAPI app: rules.py (all decisions), api.py (routes and roles), security.py,
-            notify.py (emails exactly once), summary.py (Gemini, checked), store*.py (memory / Firestore)
+            notify.py (emails exactly once), summary.py (Gemini, checked),
+            store.py / store_postgres.py / store_firestore.py (one interface, three backends)
 static/     index.html (landing), circle.html (family, nurse, doctor), bedside.html (him)
-tests/      52 tests: rules, security, API flows, the model check
+tests/      rules, security, API flows, storage contract, the model check
+render.yaml Render Blueprint (free web service and PostgreSQL)
 deploy.sh   one-command Google Cloud deploy
 ```
 

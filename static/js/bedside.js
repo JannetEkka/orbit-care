@@ -51,7 +51,7 @@
     const due = state.due[0];
     if (due) {
       const button = el("button", { class: "take", type: "button", "aria-label": `Tap when ${due.name} has been taken` },
-        el("span", { text: `${state.name}, it's time for your medicine` }),
+        el("span", { class: "prompt", text: `${state.name}, it's time for your medicine` }),
         el("span", { class: pillClass(due.colour) }),
         el("span", { class: "med", text: tablets(due) }),
         due.instructions ? el("span", { text: due.instructions }) : null,

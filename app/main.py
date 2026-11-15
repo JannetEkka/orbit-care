@@ -21,7 +21,7 @@ from . import notify
 from .api import build_router
 from .care import Ctx
 from .config import Settings
-from .mailer import Mailer
+from .mailer import Mailer, make_mailer
 from .store import MemoryStore, Store
 from .summary import Summariser
 
@@ -47,6 +47,10 @@ def _make_store(settings: Settings) -> Store:
         from .store_firestore import FirestoreStore
 
         return FirestoreStore()
+    if settings.store_backend == "postgres":
+        from .store_postgres import PostgresStore
+
+        return PostgresStore(settings.database_url)
     return MemoryStore()
 
 
@@ -61,7 +65,7 @@ def create_app(
     ctx = Ctx(
         settings=settings,
         store=store or _make_store(settings),
-        mailer=mailer or Mailer(settings.smtp_host, settings.smtp_port, settings.smtp_user, settings.smtp_password),
+        mailer=mailer or make_mailer(settings),
         summariser=summariser or Summariser(settings.gemini_api_key, settings.gemini_model),
         clock=clock or (lambda: datetime.now(UTC)),
     )

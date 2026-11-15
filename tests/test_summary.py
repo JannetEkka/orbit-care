@@ -46,3 +46,18 @@ def test_model_tags_are_limited_to_the_allowed_list():
 
 def test_keyword_tags_without_a_model():
     assert keyword_tags("Slipped near the bed, a bit confused") == ["confusion", "fall"]
+
+
+def test_brevo_mailer_sends_over_https():
+    from app.mailer import BrevoMailer
+
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["key"] = request.headers["api-key"]
+        seen["body"] = request.read().decode()
+        return httpx.Response(201, json={"messageId": "x"})
+
+    mailer = BrevoMailer("k", "orbit@example.com", client=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert mailer.send(["a@example.com"], "Hi\nBcc: x@example.com", "body") == (True, "")
+    assert seen["key"] == "k" and "Bcc: x" in seen["body"] and "\\n" not in seen["body"].split("subject")[1][:40]

@@ -30,6 +30,9 @@ class Settings:
     smtp_port: int = 465
     smtp_user: str = ""
     smtp_password: str = ""
+    database_url: str = ""
+    brevo_api_key: str = ""
+    mail_from: str = ""
     daily_email_cap: int = 40
     max_demo_orbits: int = 300
 
@@ -41,7 +44,8 @@ class Settings:
             secret_key=os.environ.get("ORBIT_SECRET_KEY") or secrets.token_urlsafe(48),
             store_backend=os.environ.get("ORBIT_STORE", "memory").strip().lower(),
             tick_token=os.environ.get("ORBIT_TICK_TOKEN", ""),
-            base_url=os.environ.get("ORBIT_BASE_URL", "").rstrip("/"),
+            # Render sets RENDER_EXTERNAL_URL itself, so links in emails work with no setup.
+            base_url=(os.environ.get("ORBIT_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).rstrip("/"),
             cookie_secure=_flag("ORBIT_COOKIE_SECURE", True),
             inprocess_tick=_flag("ORBIT_INPROCESS_TICK", False),
             gemini_api_key=os.environ.get("GEMINI_API_KEY", ""),
@@ -50,4 +54,7 @@ class Settings:
             smtp_port=int(os.environ.get("SMTP_PORT", "465")),
             smtp_user=os.environ.get("SMTP_USER", ""),
             smtp_password=os.environ.get("SMTP_PASSWORD", ""),
+            database_url=os.environ.get("DATABASE_URL", ""),
+            brevo_api_key=os.environ.get("BREVO_API_KEY", ""),
+            mail_from=os.environ.get("MAIL_FROM", "") or os.environ.get("SMTP_USER", ""),
         )
