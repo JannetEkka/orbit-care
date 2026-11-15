@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbit · elder care circle</title>
+  <meta name="description" content="Orbit keeps a very unwell elder at the centre: a one-button bedside screen for him, and a shared care circle for family, nurse and doctor.">
+  <link rel="stylesheet" href="/static/css/orbit.css">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Orbit home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="5" fill="#c2410c"/><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+      Orbit
+    </a>
+    <a class="btn" href="#signin">Sign in</a>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="headline">
+      <div>
+        <h1 id="headline">Care that circles around him.</h1>
+        <p class="lede">For the parent who can no longer manage a phone. He gets one big button by his bed. Family, nurse and doctor share everything else: who gives each dose, what was missed, how he is, and who to call.</p>
+        <div class="hero-actions">
+          <button id="try-demo" class="btn-accent" type="button">Open a sample family</button>
+          <a class="btn" href="#start">Start your own</a>
+        </div>
+        <p class="muted small">The sample has a week of history. It is yours alone, sends no real email and is deleted after 24 hours.</p>
+        <div id="demo-result" class="card hidden" tabindex="-1" aria-live="polite"></div>
+      </div>
+
+      <div class="preview" aria-label="What Orbit looks like">
+        <div class="mini-bedside" aria-hidden="true">
+          <div>Papa, it's time for your medicine</div>
+          <div class="big">Levodopa · 1 yellow tablet</div>
+          <div class="tap">Tap when taken</div>
+        </div>
+        <div class="card mini-list" aria-hidden="true">
+          <div><strong>18:00 Levodopa</strong><span class="chip missed">not given</span></div>
+          <div class="muted small">Nurse reminded at 18:30 · whole family told at 19:00</div>
+          <div><strong>Evening doses this week</strong><span class="chip missed">67%</span></div>
+          <div><strong>Atorvastatin</strong><span class="chip">4 days left · Buy</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="who" aria-label="Who uses Orbit">
+      <div class="card">
+        <h2>For him</h2>
+        <p>A tablet by the bed. No reading, no typing. At dose time it speaks and the whole screen becomes one button. A Help button tells everyone at once. One picture question a day: how are you feeling?</p>
+      </div>
+      <div class="card">
+        <h2>For family and nurse</h2>
+        <p>Every dose has a named person who gives it. Missed doses go to that person first, then to the whole family. Medicines, refills, checkups, side-effect notes and an evening update.</p>
+      </div>
+      <div class="card">
+        <h2>For the doctor</h2>
+        <p>Read-only. Adherence by medicine and time of day, with tremor, confusion and falls next to the doses, written up from the record before each visit.</p>
+      </div>
+    </section>
+
+    <section class="panels" aria-label="Sign in or start">
+      <form id="signin" class="card" novalidate>
+        <h2>Sign in</h2>
+        <p class="muted small">Each person in the circle has their own passcode.</p>
+        <label for="login-code">Orbit code</label>
+        <input id="login-code" name="orbit_code" autocomplete="username" maxlength="8" required>
+        <label for="login-pass">Passcode</label>
+        <input id="login-pass" name="passcode" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" required>
+        <p class="error" id="login-error" role="alert"></p>
+        <div class="form-actions"><button class="btn-primary" type="submit">Sign in</button></div>
+      </form>
+
+      <form id="start" class="card" novalidate>
+        <h2>Start your own</h2>
+        <label for="start-elder">Who is this for?</label>
+        <input id="start-elder" name="elder_name" placeholder="e.g. Mr. Thomas" maxlength="80" required>
+        <label for="start-you">Your name</label>
+        <input id="start-you" name="your_name" maxlength="80" autocomplete="name" required>
+        <label for="start-email">Your email (for reminders)</label>
+        <input id="start-email" name="your_email" type="email" maxlength="254" autocomplete="email">
+        <label for="start-pass">Choose a passcode (6–12 digits)</label>
+        <input id="start-pass" name="passcode" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" required>
+        <p class="error" id="start-error" role="alert"></p>
+        <div class="form-actions"><button class="btn-primary" type="submit">Create the circle</button></div>
+      </form>
+
+      <div class="card">
+        <h2>How reminders work</h2>
+        <ol class="small">
+          <li>15 minutes before a dose, the person giving it gets an email.</li>
+          <li>30 minutes after, if it isn't marked, they are reminded.</li>
+          <li>After 60 minutes, the whole family is told.</li>
+          <li>Appointments: a week before and the day before. Regular checkups: when one is due and nothing is booked.</li>
+          <li>Refills: when about 5 days of tablets are left.</li>
+        </ol>
+        <p class="muted small">Every rule is fixed code you can read in the repository. The AI only writes the words of summaries, and its text is checked against the record.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Orbit is a prototype built for the Catalyst hackathon. It does not replace medical advice or emergency services. In an emergency, call 112.
+  </footer>
+</div>
+<script src="/static/js/common.js"></script>
+<script src="/static/js/index.js"></script>
+</body>
+</html>

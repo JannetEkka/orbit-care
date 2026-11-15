@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbit · bedside</title>
+  <link rel="stylesheet" href="/static/css/orbit.css">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<main class="bedside" id="main">
+  <header>
+    <div>
+      <div class="clock" id="clock" aria-live="off">--:--</div>
+      <div class="dayname" id="dayname"></div>
+    </div>
+    <div class="row">
+      <button id="sound" type="button" aria-pressed="false">Turn on voice</button>
+      <a class="btn" href="/circle" id="back" title="Family view">Family view</a>
+    </div>
+  </header>
+
+  <h1 class="sr-only" id="greeting">Bedside screen</h1>
+
+  <section class="stage" id="stage" aria-live="polite"></section>
+
+  <section id="feel" class="hidden" aria-labelledby="feel-q">
+    <h2 id="feel-q" class="dayname">How are you feeling today?</h2>
+    <div class="feel">
+      <button type="button" class="btn-ok" data-feel="good" aria-label="I feel good">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="22" cy="26" r="4" fill="currentColor"/><circle cx="42" cy="26" r="4" fill="currentColor"/><path d="M19 39 q13 13 26 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
+        Good
+      </button>
+      <button type="button" class="btn-accent" data-feel="not_good" aria-label="I do not feel good">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="22" cy="26" r="4" fill="currentColor"/><circle cx="42" cy="26" r="4" fill="currentColor"/><path d="M19 46 q13 -13 26 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
+        Not good
+      </button>
+    </div>
+  </section>
+
+  <section class="helpbar">
+    <button type="button" class="help" id="help">Help</button>
+    <div id="calls" class="callgrid hidden" aria-label="Call someone"></div>
+  </section>
+</main>
+<script src="/static/js/common.js"></script>
+<script src="/static/js/bedside.js"></script>
+</body>
+</html>
