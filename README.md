@@ -4,7 +4,7 @@
 
 Built for **Catalyst: Solo AI Hackathon** (Makers Need More × PromptWars, Hack2skill), challenge *Elderly Care & Medication Management Platform*.
 
-**Live:** _added after deploy_ · **Try it:** open the live link and press **Open a sample family**. It creates a private sample with a week of history and shows the passcodes for each person, so you can see every view.
+**Live:** https://orbit-care.onrender.com (free Render instance: the first load after a quiet spell can take up to a minute) · **Try it:** open the live link and press **Open a sample family**. It creates a private sample with a week of history and shows the passcodes for each person, so you can see every view.
 
 ## Why it looks like this
 
@@ -84,7 +84,18 @@ All numbers below come from our own runs on 2026-11-15.
 
 ## Accessibility
 
-- Bedside: very large targets, no reading needed, spoken prompts (Web Speech API, turned on once), a tablet-colour dot, and one question at a time.
+- **Bedside, for shaking hands and tired eyes:**
+  - The whole screen is one button, with the tablet drawn in its real colour and a "Repeat" button for the spoken prompt (Web Speech API).
+  - Help needs a 2-second hold, so a brushing hand never raises a false alarm (Enter also works).
+  - Warm amber night mode from 21:00 to 06:00.
+  - A "Connected to family" status that changes to "Offline" when the network drops.
+  - A soft chime and vibration when a dose is taken, and a confirmation naming who can see it.
+- **Care circle:**
+  - Doses are grouped into morning, afternoon, evening and night, each with the giver's avatar.
+  - Refills show as supply bars.
+  - Every dose mark can be undone for 10 seconds.
+  - Empty states tell a new family what to do first.
+  - The doctor's brief prints on one page, with doses and symptoms on the same day-by-day timeline.
 - Semantic HTML with labels on every field, a skip link, keyboard-navigable tabs (arrow keys), visible focus rings, and `aria-live` for updates.
 - High-contrast colours in both light and dark themes. The one accent colour (coral) always means "needs someone now".
 - Respects reduced motion. Works at phone width without sideways scrolling.
