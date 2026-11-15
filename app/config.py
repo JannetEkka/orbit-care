@@ -24,6 +24,7 @@ class Settings:
     base_url: str = ""
     cookie_secure: bool = True
     inprocess_tick: bool = False
+    keep_awake: bool = False
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"
     smtp_host: str = "smtp.gmail.com"
@@ -47,7 +48,10 @@ class Settings:
             # Render sets RENDER_EXTERNAL_URL itself, so links in emails work with no setup.
             base_url=(os.environ.get("ORBIT_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).rstrip("/"),
             cookie_secure=_flag("ORBIT_COOKIE_SECURE", True),
-            inprocess_tick=_flag("ORBIT_INPROCESS_TICK", False),
+            # On Render (which sets RENDER=true) the app runs the reminder check itself every
+            # five minutes and keeps its free instance awake; elsewhere a scheduler calls it.
+            inprocess_tick=_flag("ORBIT_INPROCESS_TICK", bool(os.environ.get("RENDER"))),
+            keep_awake=_flag("ORBIT_KEEP_AWAKE", bool(os.environ.get("RENDER"))),
             gemini_api_key=os.environ.get("GEMINI_API_KEY", ""),
             gemini_model=os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite"),
             smtp_host=os.environ.get("SMTP_HOST", "smtp.gmail.com"),

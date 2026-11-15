@@ -305,3 +305,13 @@ def test_demo_dates_move_with_the_clock(client, clock):
     post(client, "/api/demo")
     timeline = client.get("/api/summary?days=7&write=false").json()["timeline"]
     assert timeline[0]["date"] == (clock.now + timedelta(hours=5, minutes=30)).date().isoformat()
+
+
+def test_on_render_the_app_runs_its_own_reminder_check(monkeypatch):
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.delenv("ORBIT_INPROCESS_TICK", raising=False)
+    monkeypatch.delenv("ORBIT_KEEP_AWAKE", raising=False)
+    settings = Settings.from_env()
+    assert settings.inprocess_tick and settings.keep_awake
+    monkeypatch.delenv("RENDER")
+    assert not Settings.from_env().inprocess_tick

@@ -80,12 +80,12 @@ Thresholds are per family, under People & settings. Adherence is counted only fo
  Family / nurse ─┼─► FastAPI web service ───┤
  Doctor (read) ──┘          ▲               └─ Gemini API (words only, checked)
                             │ every 5 min
-   GitHub Actions schedule  ┘ (or Cloud Scheduler) ──► /tasks/tick ──► email (Brevo API or SMTP)
+   in-app timer · GitHub Actions · Cloud Scheduler ──► reminder check ──► email (Brevo API or SMTP)
 ```
 
 1. **One Python service** serves the three screens and the API. It runs on Render's free plan (`render.yaml`) or on Google Cloud Run (`deploy.sh`).
 2. **One storage interface with three backends:** PostgreSQL on Render, Firestore on Google Cloud, and in-memory storage for local runs. Every test runs against memory and against a real PostgreSQL. Storage holds each elder's profile, people, medicines, doses, visits, notes, feelings, outbox and history. Passcodes are stored only as hashes.
-3. **A schedule calls `/tasks/tick` every five minutes** with a secret header: a GitHub Actions workflow on Render (`.github/workflows/tick.yml`), or Cloud Scheduler on Google Cloud. **Fixed rules** in `app/rules.py` decide what is due, what is missed and who is told. Every email has a stable key and is created only once, so a repeated tick never sends it twice.
+3. **The reminder check runs every five minutes.** On Render the app runs it itself and keeps its free instance awake, with a GitHub Actions workflow (`.github/workflows/tick.yml`) as a second caller. On Google Cloud, Cloud Scheduler calls `/tasks/tick` with a secret header. **Fixed rules** in `app/rules.py` decide what is due, what is missed and who is told. Every email has a stable key and is created only once, so a repeated tick never sends it twice.
 4. **Gemini only writes words**: the evening update for the family, the summary before a doctor's visit, and tags suggested from a free-text care note. Every number comes from code. If the model's text contains a number that is not in the facts it was given, the text is thrown away and a plain template is used. The same happens when the model is slow or down, so the app works fully without it.
 5. **Secrets** (session key, scheduler token, Gemini key, email key) live in the host's environment settings: Render environment variables, or Secret Manager on Google Cloud. None are in the repository.
 

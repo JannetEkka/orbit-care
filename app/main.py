@@ -13,6 +13,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -129,13 +130,27 @@ def _page(filename: str):
 
 
 async def _tick_forever(ctx: Ctx) -> None:
-    """Local runs only: Cloud Run uses Cloud Scheduler to call /tasks/tick instead."""
+    """Run the reminder rules every five minutes inside the app (Render and local runs).
+
+    Cloud Run uses Cloud Scheduler instead. Sending is idempotent, so this can safely
+    overlap with an external scheduler. With keep_awake, the loop also calls the app's
+    own public address, so a free instance that sleeps when idle stays reachable.
+    """
     while True:
         try:
             await asyncio.to_thread(notify.run_tick, ctx)
         except Exception:  # noqa: BLE001 - the loop must survive one bad pass
             log.exception("In-process tick failed")
+        if ctx.settings.keep_awake and ctx.settings.base_url:
+            await asyncio.to_thread(_ping, f"{ctx.settings.base_url}/healthz")
         await asyncio.sleep(TICK_SECONDS)
+
+
+def _ping(url: str) -> None:
+    try:
+        httpx.get(url, timeout=10)
+    except httpx.HTTPError:
+        log.warning("Keep-awake request failed")
 
 
 app = create_app()
