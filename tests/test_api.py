@@ -170,3 +170,22 @@ def test_demo_orbit_has_a_week_and_sends_no_real_email(client, mailer):
 def test_pages_are_served(client):
     for path in ("/", "/circle", "/bedside", "/healthz"):
         assert client.get(path).status_code == 200
+
+
+def test_undo_restores_the_dose_and_the_stock(client, family, clock):
+    med = add_levodopa(client, stock=20)
+    clock.advance(minutes=40)
+    key = client.get("/api/today").json()["doses"][0]["key"]
+    post(client, f"/api/doses/{key}/mark", {"status": "given"})
+    assert client.delete(f"/api/doses/{key}/mark", headers={"x-orbit": "1"}).status_code == 200
+    dose = client.get("/api/today").json()["doses"][0]
+    assert dose["state"] == "due"
+    assert next(m for m in client.get("/api/medicines").json() if m["id"] == med["id"])["stock"] == 20
+
+
+def test_summary_has_a_day_by_day_timeline(client):
+    post(client, "/api/demo")
+    timeline = client.get("/api/summary?days=7").json()["timeline"]
+    assert len(timeline) == 7
+    assert any("missed" in [d["state"] for d in row["doses"]] for row in timeline)
+    assert any(row["tags"] for row in timeline)

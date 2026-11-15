@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Orbit · care circle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="/static/css/orbit.css">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 </head>
@@ -12,17 +15,21 @@
 <div class="wrap">
   <header class="topbar">
     <a class="brand" href="/circle" aria-label="Orbit">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="5" fill="#c2410c"/><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+      <svg viewBox="0 0 34 34" aria-hidden="true"><ellipse cx="17" cy="17" rx="15" ry="9" fill="none" stroke="currentColor" stroke-width="2" transform="rotate(-24 17 17)"/><circle cx="17" cy="17" r="5.5" fill="#b4532a"/><circle cx="29.5" cy="11.5" r="2.6" fill="#3f7a5a"/></svg>
       <span id="title">Orbit</span>
     </a>
     <div class="row">
       <span class="muted small" id="whoami"></span>
-      <a class="btn" href="/bedside" id="to-bedside">Bedside screen</a>
-      <button type="button" id="logout">Sign out</button>
+      <a class="btn btn-sm" href="/bedside" id="to-bedside">His bedside screen</a>
+      <button type="button" class="btn-sm" id="logout">Sign out</button>
     </div>
   </header>
 
   <div id="banner" class="notice hidden" role="status"></div>
+  <div class="greet">
+    <h1 id="greet-title">Today</h1>
+    <div class="progress-line" id="greet-line"></div>
+  </div>
 
   <nav class="tabs" role="tablist" aria-label="Sections" id="tabs"></nav>
 
@@ -31,10 +38,10 @@
       <div class="grid">
         <div class="card">
           <div class="spread">
-            <h2 id="today-title">Today</h2>
+            <h2 id="today-title">Today's doses</h2>
             <div class="row">
               <label for="day-pick" class="sr-only">Show another day</label>
-              <input type="date" id="day-pick" class="small">
+              <input type="date" id="day-pick">
             </div>
           </div>
           <div id="doses" aria-live="polite"></div>
@@ -88,22 +95,44 @@
     <section id="tab-summary" role="tabpanel" aria-labelledby="t-summary" class="hidden">
       <div class="grid">
         <div class="card">
-          <div class="spread">
-            <h2>Before the next visit</h2>
-            <div class="row" role="group" aria-label="Period">
-              <button type="button" data-days="7">7 days</button>
-              <button type="button" data-days="14">14 days</button>
-              <button type="button" data-days="30">30 days</button>
+          <div class="brief-head">
+            <div>
+              <p class="eyebrow">Care brief for the doctor</p>
+              <h2><span id="brief-name"></span></h2>
+              <p class="muted small" id="brief-period"></p>
+            </div>
+            <div class="row no-print" role="group" aria-label="Period">
+              <button type="button" class="btn-sm" data-days="7">7 days</button>
+              <button type="button" class="btn-sm" data-days="14">14 days</button>
+              <button type="button" class="btn-sm" data-days="30">30 days</button>
+              <button type="button" class="btn-sm btn-primary" id="print-brief">Print</button>
             </div>
           </div>
-          <p id="summary-text" aria-live="polite"></p>
+          <p id="summary-text" class="serif" aria-live="polite"></p>
           <p class="muted small" id="summary-source"></p>
         </div>
         <div class="dash">
           <div class="card"><h3>By medicine</h3><div class="bars" id="by-med"></div></div>
-          <div class="card"><h3>By time of day</h3><div class="bars" id="by-part"></div><p class="stat" id="overall"></p><p class="muted small" id="overall-note"></p></div>
+          <div class="card"><h3>Overall</h3><p class="stat" id="overall"></p><p class="muted small" id="overall-note"></p><h3 class="block">By time of day</h3><div class="bars" id="by-part"></div></div>
         </div>
-        <div class="card" id="request-card">
+        <div class="card">
+          <h3>Doses and symptoms, day by day</h3>
+          <p class="muted small">Each square is one dose. Look for missed doses on the same days as tremor, confusion or falls.</p>
+          <div class="daygrid">
+            <table>
+              <caption class="sr-only">Doses, symptoms and mood for each day</caption>
+              <thead><tr><th scope="col">Day</th><th scope="col">Doses</th><th scope="col">Symptoms noted</th><th scope="col">How he felt</th></tr></thead>
+              <tbody id="timeline-body"></tbody>
+            </table>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span><span class="dots"><i></i></span> given</span>
+            <span><span class="dots"><i class="missed"></i></span> missed</span>
+            <span><span class="dots"><i class="skipped"></i></span> skipped</span>
+            <span><span class="dots"><i class="pending"></i></span> not due yet</span>
+          </div>
+        </div>
+        <div class="card no-print" id="request-card">
           <h3>Ask the doctor</h3>
           <p class="muted small">Sends the doctor his current medicines, today's doses and recent notes with your request.</p>
           <form id="request-form" novalidate>
@@ -145,7 +174,7 @@
 
 <dialog id="dialog" aria-labelledby="dialog-title">
   <form id="dialog-form" novalidate>
-    <h2 id="dialog-title"></h2>
+    <div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" class="close btn-ghost" id="dialog-x" aria-label="Close">✕</button></div>
     <div id="dialog-body"></div>
     <p class="error" id="dialog-error" role="alert"></p>
     <div class="form-actions">

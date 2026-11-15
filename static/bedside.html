@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f5f0">
   <title>Orbit · bedside</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="/static/css/orbit.css">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 </head>
@@ -14,9 +18,11 @@
       <div class="clock" id="clock" aria-live="off">--:--</div>
       <div class="dayname" id="dayname"></div>
     </div>
-    <div class="row">
-      <button id="sound" type="button" aria-pressed="false">Turn on voice</button>
-      <a class="btn" href="/circle" id="back" title="Family view">Family view</a>
+    <div class="top-actions">
+      <span class="conn" id="conn" role="status">Connected to family</span>
+      <button id="repeat" type="button" class="btn-sm" aria-label="Say it again">🔊 Repeat</button>
+      <button id="sound" type="button" class="btn-sm" aria-pressed="false">Turn on voice</button>
+      <a class="btn btn-sm" href="/circle" id="back">Family view</a>
     </div>
   </header>
 
@@ -27,19 +33,20 @@
   <section id="feel" class="hidden" aria-labelledby="feel-q">
     <h2 id="feel-q" class="dayname">How are you feeling today?</h2>
     <div class="feel">
-      <button type="button" class="btn-ok" data-feel="good" aria-label="I feel good">
+      <button type="button" class="good" data-feel="good" aria-label="I feel good">
         <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="22" cy="26" r="4" fill="currentColor"/><circle cx="42" cy="26" r="4" fill="currentColor"/><path d="M19 39 q13 13 26 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
         Good
       </button>
-      <button type="button" class="btn-accent" data-feel="not_good" aria-label="I do not feel good">
+      <button type="button" class="bad" data-feel="not_good" aria-label="I do not feel good">
         <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="22" cy="26" r="4" fill="currentColor"/><circle cx="42" cy="26" r="4" fill="currentColor"/><path d="M19 46 q13 -13 26 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
         Not good
       </button>
     </div>
   </section>
 
-  <section class="helpbar">
-    <button type="button" class="help" id="help">Help</button>
+  <section class="bed-actions">
+    <button type="button" class="help" id="help" aria-describedby="help-hint"><span class="fillbar"></span><span id="help-text">Hold for Help</span></button>
+    <p class="sr-only" id="help-hint">Press and hold for two seconds to alert the family. Pressing Enter also works.</p>
     <div id="calls" class="callgrid hidden" aria-label="Call someone"></div>
   </section>
 </main>

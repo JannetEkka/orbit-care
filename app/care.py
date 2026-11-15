@@ -168,3 +168,31 @@ def today_template(facts: dict) -> str:
     if facts["refill_soon"]:
         lines.append("Running low: " + ", ".join(facts["refill_soon"]) + ".")
     return " ".join(lines)
+
+
+def day_timeline(ctx: Ctx, pid: str, profile: dict, start_text: str, end_text: str) -> list[dict]:
+    """One row per day, newest first: each dose's state next to that day's symptoms and mood."""
+    now = local_now(profile, ctx.clock())
+    start, end = date.fromisoformat(start_text), date.fromisoformat(end_text)
+    settings = rules.settings_of(profile)
+    meds = ctx.store.list(pid, "medicines")
+    events = load_events(ctx.store, pid, start, end)
+    notes = ctx.store.list(pid, "notes", field="date", lo=start_text, hi=end_text)
+    feelings = {
+        f["date"]: f["value"] for f in ctx.store.list(pid, "feelings", field="date", lo=start_text, hi=end_text)
+    }
+    rows = []
+    day = end
+    while day >= start:
+        view = rules.day_view(meds, events, day, now, settings)
+        text = day.isoformat()
+        rows.append(
+            {
+                "date": text,
+                "doses": [{"time": d["time"], "name": d["name"], "state": d["state"]} for d in view],
+                "tags": sorted({t for n in notes if n["date"] == text for t in n.get("tags", [])}),
+                "feeling": feelings.get(text),
+            }
+        )
+        day -= timedelta(days=1)
+    return rows

@@ -1,11 +1,14 @@
 "use strict";
 // The care circle: family, nurse (caretaker) and doctor. What each sees depends on their role.
 (() => {
-  const { api, el, clear, toast, formData, telLink, fmtTime, pillClass } = Orbit;
+  const { api, el, clear, toast, formData, telLink, fmtTime, pillClass, avatar } = Orbit;
   const TAGS = ["tremor", "confusion", "fall", "sleepy", "nausea", "pain", "not_eating", "calm"];
   const COLOURS = ["white", "yellow", "pink", "blue", "green", "orange"];
   const ROLE_NAMES = { family: "Family", caretaker: "Nurse / caretaker", doctor: "Doctor (read-only)", elder: "Bedside screen" };
   const STATE_TEXT = { given: "given", skipped: "skipped", missed: "not given", due: "due now", upcoming: "later" };
+  const PARTS = [["morning", 5, 12], ["afternoon", 12, 17], ["evening", 17, 21], ["night", 21, 29]];
+  const partOf = (hhmm) => { const h = Number(hhmm.slice(0, 2)); const hour = h < 5 ? h + 24 : h; return PARTS.find(([, a, b]) => hour >= a && hour < b)[0]; };
+  const memberById = (id) => (today && today.members.find((m) => m.id === id)) || null;
   const PHARMACIES = [
     ["Tata 1mg", (n) => `https://www.1mg.com/search/all?name=${encodeURIComponent(n)}`],
     ["PharmEasy", (n) => `https://pharmeasy.in/search/all?name=${encodeURIComponent(n)}`],
@@ -77,63 +80,118 @@
     renderAbout();
   }
 
+  function emptyState(text, buttonText, onClick) {
+    const box = el("div", { class: "empty" }, el("div", { class: "serif", text: "🌿" }), el("p", { text }));
+    if (buttonText && canEdit()) box.append(el("button", { type: "button", class: "btn btn-primary", onclick: onClick }, buttonText));
+    return box;
+  }
+
+  function renderGreeting() {
+    const a = today.about || {};
+    const name = a.address_as || today.elder_name;
+    const total = today.doses.length;
+    const given = today.doses.filter((d) => d.state === "given").length;
+    const open = today.doses.filter((d) => d.state === "due" || d.state === "missed").length;
+    document.getElementById("greet-title").textContent = today.is_today ? `${name}'s day` : `${name} on ${today.date}`;
+    const line = clear(document.getElementById("greet-line"));
+    line.append(el("span", { class: "chip given", text: `${given} of ${total} doses given` }));
+    if (open) line.append(el("span", { class: "chip missed", text: `${open} need${open === 1 ? "s" : ""} someone` }));
+    if (today.feeling) line.append(el("span", { class: today.feeling === "good" ? "chip given" : "chip missed", text: today.feeling === "good" ? "He said he feels good" : "He said he doesn't feel good" }));
+  }
+
   function renderDoses() {
+    renderGreeting();
     const box = clear(document.getElementById("doses"));
     if (!today.doses.length) {
-      box.append(el("p", { class: "muted", text: "No medicines scheduled. Add one under Medicines." }));
+      box.append(emptyState(`No medicines yet. Add ${(today.about || {}).address_as || today.elder_name}'s first medicine to start the circle.`, "Add a medicine", () => { showTab("medicines"); medicineDialog(null); }));
       return;
     }
-    for (const dose of today.doses) {
-      const acts = el("div", { class: "acts" });
-      const markable = canEdit() && today.is_today !== false && dose.state !== "upcoming";
-      if (markable && dose.state !== "given") acts.append(el("button", { type: "button", class: "btn-ok", onclick: () => mark(dose, "given") }, "Given"));
-      if (markable && dose.state !== "skipped") acts.append(el("button", { type: "button", onclick: () => mark(dose, "skipped") }, "Skipped"));
-      const who = dose.by_name ? `${STATE_TEXT[dose.state]} by ${dose.by_name}` : `given by ${memberName(dose.giver_id)}`;
-      box.append(el("div", { class: `dose state-${dose.state}` },
-        el("div", { class: "time", text: dose.time }),
-        el("div", {},
-          el("div", { class: "what" }, el("span", { class: pillClass(dose.colour), "aria-hidden": "true" }),
-            el("strong", { text: dose.name }), el("span", { class: "muted", text: dose.dose })),
-          el("div", { class: "small muted" },
-            el("span", { class: `chip ${dose.state}`, text: STATE_TEXT[dose.state] }), " ", who,
-            dose.reason ? ` · ${dose.reason}` : "")),
-        acts));
+    for (const [part] of PARTS) {
+      const doses = today.doses.filter((d) => partOf(d.time) === part);
+      if (!doses.length) continue;
+      const block = el("div", { class: "block" }, el("div", { class: "block-head", text: part }));
+      for (const dose of doses) block.append(doseRow(dose));
+      box.append(block);
     }
+  }
+
+  function doseRow(dose) {
+    const acts = el("div", { class: "acts" });
+    const markable = canEdit() && today.is_today !== false && dose.state !== "upcoming";
+    if (markable && dose.state !== "given") acts.append(el("button", { type: "button", class: "btn btn-sage btn-sm", onclick: () => mark(dose, "given") }, "✓ Given"));
+    if (markable && dose.state !== "skipped" && dose.state !== "given") acts.append(el("button", { type: "button", class: "btn btn-sm", onclick: () => mark(dose, "skipped") }, "Skipped"));
+    const giver = memberById(dose.giver_id);
+    const whoName = dose.by_name || (giver ? giver.name : "Family");
+    const whoText = dose.by_name ? `${STATE_TEXT[dose.state]} by ${dose.by_name}` : `${giver ? giver.name : "anyone in the family"} gives it`;
+    return el("div", { class: `dose state-${dose.state}`, id: `dose-${dose.key}` },
+      el("div", { class: "time", text: dose.time }),
+      el("div", {},
+        el("div", { class: "what" }, el("span", { class: pillClass(dose.colour), "aria-hidden": "true" }),
+          el("strong", { text: dose.name }), el("span", { class: "muted", text: dose.dose })),
+        el("div", { class: "meta" }, avatar(whoName, dose.by_name || dose.giver_id),
+          el("span", { class: `chip ${dose.state}`, text: STATE_TEXT[dose.state] }),
+          el("span", { text: whoText + (dose.reason ? ` · ${dose.reason}` : "") }))),
+      acts);
   }
 
   async function mark(dose, status) {
     let reason = "";
-    if (status === "skipped") {
-      reason = window.prompt(`Why was ${dose.name} at ${dose.time} skipped? (optional)`, "") || "";
-    }
+    if (status === "skipped") reason = window.prompt(`Why was ${dose.name} at ${dose.time} skipped? (optional)`, "") || "";
     try {
       await api(`/api/doses/${encodeURIComponent(dose.key)}/mark`, { method: "POST", body: { status, reason: reason.slice(0, 120) } });
-      toast(`${dose.name} at ${dose.time} marked ${status}.`);
+      if (navigator.vibrate) navigator.vibrate(30);
       await loadToday();
+      const row = document.getElementById(`dose-${dose.key}`);
+      if (row) { row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1200); }
+      toast(`${dose.name} at ${dose.time} marked ${status}.`, {
+        action: "Undo",
+        ms: 10000,
+        onAction: async () => {
+          try {
+            await api(`/api/doses/${encodeURIComponent(dose.key)}/mark`, { method: "DELETE" });
+            toast("Undone.");
+            await loadToday();
+          } catch (e) { toast(e.message); }
+        },
+      });
     } catch (e) { toast(e.message); }
+  }
+
+  function alertItem(icon, tone, title, detail, extra) {
+    return el("div", { class: "alert-item" },
+      el("span", { class: `ico ${tone}`, "aria-hidden": "true", text: icon }),
+      el("div", {}, el("strong", { text: title }), detail ? el("div", { class: "small muted", text: detail }) : null, extra || null));
+  }
+
+  function supplyBar(daysLeft, warnDays) {
+    const pct = Math.max(4, Math.min(100, Math.round((daysLeft / (warnDays * 4)) * 100)));
+    const fill = el("div", { class: daysLeft <= 2 ? "fill out" : daysLeft <= warnDays ? "fill low" : "fill" });
+    fill.style.width = `${pct}%`;
+    return el("div", { class: "supply", role: "img", "aria-label": `About ${daysLeft} days of tablets left` }, el("div", { class: "track" }, fill));
   }
 
   function renderAlerts() {
     const box = clear(document.getElementById("alerts"));
     box.append(el("h2", { text: "Needs attention" }));
     const items = [];
-    const missed = today.doses.filter((d) => d.state === "missed" || d.state === "due");
-    for (const dose of missed) items.push(el("li", {}, el("strong", { text: `${dose.time} ${dose.name}` }), ` ${STATE_TEXT[dose.state]}`));
-    for (const warning of today.refill) {
-      items.push(el("li", {}, el("strong", { text: warning.name }), ` runs out in about ${warning.days_left} days (${warning.stock} left)`));
+    for (const dose of today.doses.filter((d) => d.state === "missed" || d.state === "due")) {
+      items.push(alertItem("!", "", `${dose.time} ${dose.name} ${STATE_TEXT[dose.state]}`, `${(memberById(dose.giver_id) || {}).name || "Anyone in the family"} gives it`));
     }
-    for (const checkup of today.checkups) {
-      items.push(el("li", {}, el("strong", { text: checkup.doctor }),
-        ` checkup ${checkup.overdue ? "overdue since" : "due"} ${checkup.next_due}, nothing booked`,
-        checkup.clinic_phone ? el("span", {}, " · ", el("a", { href: telLink(checkup.clinic_phone) }, "Call clinic")) : ""));
+    if (today.feeling === "not_good") items.push(alertItem("☹", "amber", "He said he doesn't feel good today", "Consider a call or a care note."));
+    const warn = (today.settings && today.settings.refill_warn_days) || 5;
+    for (const w of today.refill) items.push(alertItem("💊", "amber", `${w.name}: about ${w.days_left} days left`, `${w.stock} tablets in hand`, supplyBar(w.days_left, warn)));
+    for (const c of today.checkups) {
+      items.push(alertItem("🩺", "amber", `${c.doctor}: checkup ${c.overdue ? "overdue" : "due"} ${c.next_due}`, "Nothing is booked yet.",
+        c.clinic_phone ? el("a", { class: "small", href: telLink(c.clinic_phone) }, "Call the clinic to book") : null));
     }
-    if (today.feeling === "not_good") items.push(el("li", {}, el("strong", { text: "He said he is not feeling good today" })));
-    if (!items.length) box.append(el("p", { class: "muted", text: "Nothing needs attention right now." }));
-    else box.append(el("ul", {}, items));
+    if (!items.length) box.append(alertItem("✓", "sage", "All calm right now", "Nothing needs anyone at the moment."));
+    else box.append(...items);
     if (today.upcoming_appointments.length) {
-      box.append(el("h3", { text: "Coming up" }));
-      box.append(el("ul", {}, today.upcoming_appointments.map((a) =>
-        el("li", {}, `${fmtTime(a.when)} · ${a.doctor}`, a.accompany_id ? ` · with ${memberName(a.accompany_id)}` : ""))));
+      box.append(el("h3", { class: "block", text: "Coming up" }));
+      for (const a of today.upcoming_appointments) {
+        const goer = memberById(a.accompany_id);
+        box.append(alertItem("📅", "sage", a.doctor, `${fmtTime(a.when)}${goer ? ` · ${goer.name} goes with him` : " · nobody assigned yet"}`));
+      }
     }
   }
 
@@ -156,9 +214,9 @@
     const low = today.refill.map((w) => w.name);
     const names = low.length ? low : [...new Set(today.doses.map((d) => d.name))].slice(0, 2);
     for (const name of names) {
-      const row = el("details", {}, el("summary", { text: `Order ${name}` }));
-      for (const [shop, url] of PHARMACIES) row.append(el("a", { class: "btn", href: url(name), target: "_blank", rel: "noopener" }, `${shop}`));
-      buy.append(row);
+      const links = el("div", { class: "row" });
+      for (const [shop, url] of PHARMACIES) links.append(el("a", { class: "btn btn-sm", href: url(name), target: "_blank", rel: "noopener" }, shop));
+      buy.append(el("details", { class: "order" }, el("summary", { text: `Order ${name}` }), links));
     }
     if (!c.chemist_phone && isFamily()) buy.append(el("p", { class: "muted small", text: "Save your chemist's number under People & settings for a one-tap call." }));
   }
@@ -195,7 +253,7 @@
   async function loadNotes() {
     const notes = await api("/api/notes");
     const box = clear(document.getElementById("note-list"));
-    if (!notes.length) { box.append(el("p", { class: "muted", text: "No notes yet." })); return; }
+    if (!notes.length) { box.append(emptyState("No care notes yet. A one-tap note about tremor, sleep or a fall helps the doctor see patterns.")); return; }
     for (const note of notes) {
       box.append(el("div", { class: "item" },
         el("div", { class: "spread" }, el("strong", { text: fmtTime(note.at) }), el("span", { class: "muted small", text: note.by_name })),
@@ -210,7 +268,7 @@
     const meds = await api("/api/medicines");
     document.getElementById("add-med").classList.toggle("hidden", !canEdit());
     const box = clear(document.getElementById("med-list"));
-    if (!meds.length) box.append(el("p", { class: "muted", text: "No medicines yet." }));
+    if (!meds.length) box.append(emptyState("No medicines yet. Add the first one, with who gives it and when.", "Add a medicine", () => medicineDialog(null)));
     for (const med of meds) {
       const slots = med.slots.map((s) => `${s.time} (${memberName(s.giver_id)})`).join(", ");
       const stock = med.stock === null || med.stock === undefined ? "stock not tracked" : `${med.stock} left · about ${med.days_left} days`;
@@ -224,6 +282,7 @@
             med.active ? null : el("span", { class: "chip skipped", text: `stopped ${med.end_date}` })),
           actions),
         el("div", { class: "small muted", text: `${slots} · ${stock}` }),
+        med.active && med.days_left !== null && med.days_left !== undefined ? supplyBar(med.days_left, (today.settings && today.settings.refill_warn_days) || 5) : null,
         med.instructions ? el("div", { class: "small", text: med.instructions }) : null));
     }
   }
@@ -290,7 +349,7 @@
     for (const checkup of today.checkups) {
       box.append(el("p", { class: "notice" }, `${checkup.doctor}: regular checkup ${checkup.overdue ? "overdue since" : "due"} ${checkup.next_due}. Nothing is booked.`));
     }
-    if (!appts.length) box.append(el("p", { class: "muted", text: "No visits yet." }));
+    if (!appts.length) box.append(emptyState("No visits yet. Add the next doctor's visit, and who goes with him.", "Add a visit", () => visitDialog(null)));
     const nowIso = today.now;
     for (const appt of appts.slice().reverse()) {
       const past = appt.when < nowIso;
@@ -382,6 +441,23 @@
     document.getElementById("overall").textContent = o.percent === null ? "–" : `${o.percent}%`;
     document.getElementById("overall-note").textContent = `${o.given} of ${o.scheduled} doses given from ${f.from} to ${f.to}. ${o.missed} missed, ${o.skipped} skipped.`;
     document.getElementById("request-card").classList.toggle("hidden", !canEdit());
+    document.getElementById("brief-name").textContent = me.elder_name;
+    document.getElementById("brief-period").textContent = `${f.from} to ${f.to}`;
+    renderTimeline(result.timeline);
+  }
+
+  function renderTimeline(rows) {
+    const body = clear(document.getElementById("timeline-body"));
+    for (const row of rows) {
+      const dots = el("div", { class: "dots" }, row.doses.map((d) =>
+        el("i", { class: d.state === "given" ? "" : d.state === "missed" ? "missed" : d.state === "skipped" ? "skipped" : "pending", title: `${d.time} ${d.name}: ${STATE_TEXT[d.state]}` })));
+      const missed = row.doses.filter((d) => d.state === "missed").map((d) => `${d.time} ${d.name}`);
+      body.append(el("tr", {},
+        el("th", { scope: "row", text: new Date(row.date + "T00:00:00").toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) }),
+        el("td", {}, dots, missed.length ? el("div", { class: "small muted", text: `Missed: ${missed.join(", ")}` }) : null),
+        el("td", {}, row.tags.map((t) => el("span", { class: "chip missed", text: label(t) }))),
+        el("td", { text: row.feeling === "good" ? "😊 good" : row.feeling === "not_good" ? "☹️ not good" : "–" })));
+    }
   }
 
   for (const b of document.querySelectorAll("[data-days]")) b.addEventListener("click", () => loadSummary(Number(b.dataset.days)).catch((e) => toast(e.message)));
@@ -518,6 +594,7 @@
     dialog.showModal();
   }
   document.getElementById("dialog-cancel").addEventListener("click", () => dialog.close());
+  document.getElementById("dialog-x").addEventListener("click", () => dialog.close());
   document.getElementById("dialog-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try { await onSave(event.target); dialog.close(); }
@@ -528,6 +605,7 @@
   document.getElementById("logout").addEventListener("click", async () => {
     try { await api("/api/logout", { method: "POST" }); } finally { window.location.href = "/"; }
   });
+  document.getElementById("print-brief").addEventListener("click", () => window.print());
   document.getElementById("day-pick").addEventListener("change", () => loadToday().catch((e) => toast(e.message)));
 
   async function start() {
@@ -544,8 +622,8 @@
     }
     buildTabs();
     buildTagPicker();
-    let first = "today";
-    try { first = sessionStorage.getItem("orbit_tab") || "today"; } catch (_) { /* ignore */ }
+    let first = me.member.role === "doctor" ? "summary" : "today";
+    try { first = sessionStorage.getItem("orbit_tab") || first; } catch (_) { /* ignore */ }
     if (!document.getElementById(`t-${first}`)) first = "today";
     showTab(first);
   }

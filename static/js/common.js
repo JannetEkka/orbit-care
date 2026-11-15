@@ -51,16 +51,30 @@ const Orbit = (() => {
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
 
   let toastTimer;
-  function toast(message) {
+  // toast("Saved") or toast("Marked given", { action: "Undo", onAction: fn, ms: 10000 })
+  function toast(message, options = {}) {
     let node = document.getElementById("toast");
     if (!node) {
       node = el("div", { id: "toast", class: "toast", role: "status", "aria-live": "polite" });
       document.body.append(node);
     }
-    node.textContent = message;
+    clear(node).append(el("span", { text: message }));
+    if (options.action) {
+      node.append(el("button", { type: "button", onclick: () => { node.classList.add("hidden"); options.onAction(); } }, options.action));
+    }
     node.classList.remove("hidden");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => node.classList.add("hidden"), 3500);
+    toastTimer = setTimeout(() => node.classList.add("hidden"), options.ms || 3500);
+  }
+
+  function initials(name) {
+    const clean = String(name || "?").split(" (")[0].replace(/^(Dr\.?|Sister|Mr\.?|Mrs\.?|Ms\.?)\s+/i, "");
+    return clean.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+  }
+  function avatar(name, id) {
+    let hash = 0;
+    for (const ch of String(id || name)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return el("span", { class: `avatar av-${hash % 6}`, title: name, "aria-hidden": "true", text: initials(name) });
   }
 
   function formData(form) {
@@ -88,5 +102,5 @@ const Orbit = (() => {
 
   const pillClass = (colour) => "pill-dot pill-" + (colour || "white");
 
-  return { api, el, clear, toast, formData, telLink, fmtTime, pillClass };
+  return { api, el, clear, toast, formData, telLink, fmtTime, pillClass, avatar };
 })();

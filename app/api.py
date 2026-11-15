@@ -285,6 +285,23 @@ def build_router(ctx: Ctx) -> APIRouter:
         care.audit(ctx, pid, member, f"dose {body.status}", f"{dose.name} {dose.time} {body.reason}")
         return {"ok": True, "state": body.status}
 
+    @router.delete("/api/doses/{key}/mark")
+    def unmark_dose(key: str, current: dict = Depends(allow(*CAREGIVERS))) -> dict:
+        """Undo a mark made by mistake: the dose goes back to due or missed, stock is restored."""
+        pid, member = current["pid"], current["member"]
+        now = care.local_now(current["profile"], ctx.clock())
+        dose = find_dose(pid, key, now)
+        previous = store.get(pid, "doses", key)
+        if not previous:
+            return {"ok": True}
+        store.delete(pid, "doses", key)
+        med = store.get(pid, "medicines", dose.med_id)
+        if previous.get("status") == "given" and med and med.get("stock") is not None:
+            med["stock"] += int(med.get("per_dose", 1))
+            store.put(pid, "medicines", med["id"], med)
+        care.audit(ctx, pid, member, "dose mark undone", f"{dose.name} {dose.time}")
+        return {"ok": True}
+
     @router.post("/api/feeling")
     def feeling(body: FeelingIn, current: dict = Depends(allow("family", "caretaker", "elder"))) -> dict:
         now = care.local_now(current["profile"], ctx.clock())
@@ -316,11 +333,13 @@ def build_router(ctx: Ctx) -> APIRouter:
         upcoming = [d for d in view if d["state"] == "upcoming"]
         name = (profile.get("about") or {}).get("address_as") or profile["elder_name"]
         contacts = profile.get("contacts", {})
+        members = store.list(pid, "members")
         people = [
             {"name": m["name"], "role": m["role"], "phone": m["phone"]}
-            for m in store.list(pid, "members")
+            for m in members
             if m.get("phone") and m["role"] != "elder"
         ]
+        circle = [m["name"].split(" (")[0] for m in members if m["role"] in CAREGIVERS]
         return {
             "now": now.isoformat(),
             "name": name,
@@ -331,6 +350,8 @@ def build_router(ctx: Ctx) -> APIRouter:
             "feeling": (store.get(pid, "feelings", now.date().isoformat()) or {}).get("value"),
             "speak": f"{name}, it is time for your medicine." if due else "",
             "people": people,
+            "circle": circle[:4],
+            "night": now.hour >= 21 or now.hour < 6,
             "ambulance_phone": contacts.get("ambulance_phone", "108"),
         }
 
@@ -560,7 +581,12 @@ def build_router(ctx: Ctx) -> APIRouter:
         facts = care.period_facts(ctx, current["pid"], current["profile"], days)
         written = ctx.summariser.write("the doctor and the family", facts, care.period_template(facts))
         notes = store.list(current["pid"], "notes", field="date", lo=facts["from"], hi=facts["to"])
-        return {"facts": facts, "summary": written, "notes": sorted(notes, key=lambda n: n["at"], reverse=True)[:30]}
+        return {
+            "facts": facts,
+            "summary": written,
+            "timeline": care.day_timeline(ctx, current["pid"], current["profile"], facts["from"], facts["to"]),
+            "notes": sorted(notes, key=lambda n: n["at"], reverse=True)[:30],
+        }
 
     @router.post("/api/doctor-request")
     def doctor_request(body: DoctorRequestIn, current: dict = Depends(allow(*CAREGIVERS))) -> dict:
