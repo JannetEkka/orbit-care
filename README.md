@@ -1,42 +1,79 @@
 # Orbit
 
-**Care that circles around him.** Orbit is an elder-care and medication platform for the parent who can no longer manage a phone. He gets one big button by his bed. His wife, children, nurse and doctor share everything else: who gives each dose, what was missed, how he is, what is running out, and who to call.
+**Care that circles around your parent.** Orbit is an elder-care and medication platform for a parent who can no longer manage a phone. They get one big button by the bed. Their family, nurse and doctor share everything else: who gives each dose, what was missed, how they are, what is running out, and who to call.
 
-Built for **Catalyst: Solo AI Hackathon** (Makers Need More × PromptWars, Hack2skill), challenge *Elderly Care & Medication Management Platform*.
+Built for **Catalyst: Solo AI Hackathon** (Makers Need More × PromptWars, Hack2skill).
 
-**Live:** https://orbit-care.onrender.com (free Render instance: the first load after a quiet spell can take up to a minute) · **Try it:** open the live link and press **See a sample family**. It creates a private sample with a week of history. A bar at the bottom switches between the family, nurse, doctor and bedside views in one tap.
+**Live:** https://orbit-care.onrender.com (free Render instance: the first load after a quiet spell can take up to a minute) · **Try it:** press **See a sample family**. It creates a private sample with a week of history. A bar at the bottom switches between the family, nurse, doctor and bedside views in one tap.
 
-## Why it looks like this
+## Chosen vertical
 
-Picture a father with Parkinson's and brain microbleeds, on heavy medication with side effects. He struggles to follow what is happening and cannot speak clearly. His wife runs a business. His children live elsewhere. A nurse comes in for part of the day.
+**Elderly Care & Medication Management Platform.**
 
-He cannot use a reminder app, so a reminder app on his phone does not help him. What helps him is the people around him knowing, every day, **whether someone actually gave him the 1 pm dose**, and hearing quickly when nobody did.
+**Persona:** an older person too unwell to manage their own care, plus the people around them.
 
-So Orbit has two very different sides:
+- **The sample family:** Papa has Parkinson's and brain microbleeds, is on heavy medication with side effects, finds it hard to follow what is happening, and cannot speak clearly. His wife runs a business, his children live elsewhere, and a nurse comes in for part of the day.
+- **Users:** the elder at the bedside, family members, a nurse or caretaker, and the doctor.
 
-| For him: the bedside screen | For the circle: family, nurse, doctor |
+## Approach and logic
+
+A reminder app does not help someone who cannot use a phone. What helps is the people around them knowing, every day, **whether someone actually gave Papa the 1 pm dose**, and hearing quickly when nobody did. So Orbit has two very different sides:
+
+| For the elder: the bedside screen | For the circle: family, nurse, doctor |
 |---|---|
 | An old phone or tablet on a stand, set up once by the family. No reading, no typing, no menus. | A shared profile behind a passcode for each person. Each person's role decides what they can see and change. |
 | At dose time it speaks ("Papa, it's time for your medicine") and the whole screen turns into one button showing the tablet's colour. | Every dose has a named person who gives it. They mark it **given** or **skipped (with the reason)**. |
-| A big **Help** button emails the whole circle at once and shows one-tap calls for the ambulance (108) and each person. | Reminders go to the person giving the dose first, then the whole family if the dose is still not marked. |
-| One picture question a day: 😊 Good / ☹️ Not good. His answer goes into the record. | Side-effect notes in one tap: tremor, confusion, fall, sleepy, nausea, pain, not eating, calm. |
+| **Hold for Help** (2 seconds) emails the whole circle at once and shows one-tap calls for the ambulance and each person. | Reminders go to the person giving the dose first, then the whole family if it is still not marked. |
+| One picture question a day: 😊 Good / ☹️ Not good. The answer goes into the record. | Side-effect notes in one tap: tremor, confusion, fall, sleepy, nausea, pain, not eating, calm. |
+
+**The logic: decisions come from context, and fixed code makes them.** Each row below is a rule in `app/rules.py` or `app/api.py`, and each is covered by a test.
+
+| Context | Decision |
+|---|---|
+| A dose is 15 minutes away | Email the person assigned to give it (or the family, if nobody is assigned) |
+| Not marked 30 minutes after it was due | The dose counts as **missed**; remind the giver |
+| Still not marked after 60 minutes | Tell **everyone else in the circle** (family and caretakers) |
+| Marked given or skipped | No more reminders. A given dose takes one off the stock count; undo puts it back |
+| Tablets left ÷ daily use ≤ 5 days | Email the family a refill warning, with chemist and pharmacy shortcuts on screen |
+| Last visit to a doctor + repeat interval is within a week, and nothing is booked | "Checkup due, nothing booked" email with the clinic's number |
+| Appointment in under 7 days / under 1 day | Email the family and the person going along |
+| 20:00 in the elder's time zone | Evening update to the family (Gemini wording, template fallback) |
+| Viewer's role | Doctor: read-only. Bedside: confirm a dose, answer "how are you", Help. Caretaker: doses, medicines, visits, notes. Family: all of that, plus people, settings, sent emails and history |
+| Local time between 21:00 and 06:00 | The bedside screen switches to low-glare amber night mode |
+| Help held for 2 seconds (once a minute at most) | Email everyone in the circle and show the call buttons |
+| Model text contains a number that is not in the record | Throw it away and use the template |
+
+Thresholds are per family, under People & settings. Adherence is counted only for doses that are given, skipped or missed, so a dose that is not due yet never lowers the figure.
+
+## Assumptions
+
+- **Someone else gives the medicine.** The elder may tap "taken" on the bedside screen, but Orbit does not expect them to manage anything. A dose counts as given only when someone marks it.
+- **A family member sets things up once:** the medicines, who gives each dose, the people and their passcodes, and the bedside tablet (signed in once with its own passcode).
+- **Doses have fixed times.** "As needed" medicines and tapering doses are not modelled yet.
+- **Times are in the elder's time zone**, Asia/Kolkata by default.
+- **Email is the alert channel**, as the challenge asks. Calls are tap-to-call buttons, because a web page cannot place a phone call by itself.
+- **Stock counts tablets given through Orbit.** After buying more, the family updates the number in hand.
+- **Sign-in is passcode-based**, as the challenge asks: an orbit code shared by the family plus a personal passcode for each person. There are no separate email-and-password accounts.
+- **Emergency numbers default to India's 112 and 108** and can be changed for each family.
+- **Gemini is optional.** Without a key, every summary uses a fixed template and all features still work.
+- **It is not a medical device** and gives no medical advice.
 
 ## What the challenge asks, and where it is
 
 | Challenge asks for | In Orbit | Code |
 |---|---|---|
-| Elder, caretakers and family share one healthcare profile | One "orbit" per elder; members with roles `family`, `caretaker`, `doctor`, `elder` (bedside) | `app/api.py` (`allow(...)` on every route) |
+| Elder, caretakers and family share one healthcare profile | One "orbit" per elder; members with roles `family`, `caretaker`, `doctor`, `elder` (bedside) | `app/auth.py` (`allow(...)` on every route) |
 | Secure, passcode-based access | Each person has their own 6–12 digit passcode, stored only as a salted scrypt hash. Weak codes like `123456` are refused, and the orbit locks for 15 minutes after 5 wrong tries. Sessions use signed HttpOnly SameSite=Strict cookies. A removed person loses access immediately. | `app/security.py` |
 | View, add, edit, manage medication schedules | Medicines with several times a day, a named person for each time, tablet colour, instructions and stock. Stopping a medicine keeps its history. | `app/api.py` (medicines) |
 | Track adherence | Each dose is given, skipped, missed, due or upcoming. Adherence is shown by medicine and by time of day (morning, afternoon, evening, night) for 7, 14 or 30 days. | `app/rules.py` (`adherence`) |
-| Monitor upcoming doctor appointments | Each visit records who goes with him, an optional repeat interval for regular checkups, a tap-to-call clinic number and an **Add to Google Calendar** link | `app/api.py`, `static/js/circle.js` |
+| Monitor upcoming doctor appointments | Each visit records who goes along, an optional repeat interval for regular checkups, a tap-to-call clinic number and an **Add to Google Calendar** link | `app/api.py`, `static/js/circle.js` |
 | Proactive email for **upcoming doses** | 15 minutes before a dose, to the person giving it | `app/rules.py` (`plan_notifications`) |
 | Proactive email for **missed medications** | 30 minutes after, to the giver; 60 minutes after, to the whole family | same |
 | Proactive email for **appointments** | A week before and the day before; also when a **regular checkup is due and nothing is booked** | same |
-| Go beyond a reminder app | The bedside screen, Help, refill countdown with buy shortcuts, a doctor call or home-visit request carrying his current medicines and notes, "About him" for every new nurse, an evening update for the children, and a history of who changed what | throughout |
-| Elder at the centre of his own decisions | The bedside screen asks how he is and records his answer; "About him" (what he likes, what calms him) is the first thing a new nurse sees. Bedside access can only confirm a dose; it cannot skip or change anything. | `static/bedside.html` |
+| Go beyond a reminder app | The bedside screen, Help, refill countdown with buy shortcuts, a doctor call or home-visit request carrying their current medicines and notes, "About them" for every new nurse, an evening update for the children, and a history of who changed what | throughout |
+| Elder at the centre of their own decisions | The bedside screen asks how they are and records the answer; "About them" (what they like, what calms them) is the first thing a new nurse sees. Bedside access can only confirm a dose; it cannot skip or change anything. | `static/bedside.html` |
 
-## How it works
+## How the solution works
 
 ```
  Bedside screen ─┐                          ┌─ PostgreSQL (Render) or Firestore (Google Cloud)
@@ -137,7 +174,7 @@ In Google Cloud Shell, from this folder: `gcloud config set project YOUR_PROJECT
 - **Smartwatch sync** (heart rate, falls, sleep): this needs each watch maker's API and a partnership.
 - **Real phone calls and SMS** for Help and missed doses. Today Help sends email and shows tap-to-call buttons, because a web page cannot place a call by itself.
 - **Booking an ambulance or a home visit through a provider's system.** Today it is a tap-to-call plus an emailed request to the saved doctor.
-- **Voice answers from him** ("I took it", "I feel dizzy") for people who can speak a little.
+- **Spoken answers from the elder** ("I took it", "I feel dizzy"), for people who can still speak a little.
 - Several languages on the bedside screen.
 
 ## Repository layout
@@ -146,7 +183,7 @@ In Google Cloud Shell, from this folder: `gcloud config set project YOUR_PROJECT
 app/        FastAPI app: rules.py (all decisions), api.py (routes and roles), security.py,
             notify.py (emails exactly once), summary.py (Gemini, checked),
             store.py / store_postgres.py / store_firestore.py (one interface, three backends)
-static/     index.html (landing), circle.html (family, nurse, doctor), bedside.html (him)
+static/     index.html (landing), circle.html (family, nurse, doctor), bedside.html (the elder)
 tests/      rules, security, API flows, editing flows, every email kind, both email senders,
             the storage contract on memory and PostgreSQL, the model check
 render.yaml Render Blueprint (free web service and PostgreSQL)
