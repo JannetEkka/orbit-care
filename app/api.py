@@ -575,11 +575,18 @@ def build_router(ctx: Ctx) -> APIRouter:
     # ---------- summary, doctor request, history ----------
 
     @router.get("/api/summary")
-    def summary(days: int = 14, current: dict = Depends(allow(*READERS))) -> dict:
+    def summary(days: int = 14, write: bool = True, current: dict = Depends(allow(*READERS))) -> dict:
+        """With write=false the facts come back at once, phrased by the template; the
+        page shows them, then asks again with write=true for Gemini's wording."""
         if days not in (7, 14, 30):
             raise HTTPException(422, "Choose 7, 14 or 30 days.")
         facts = care.period_facts(ctx, current["pid"], current["profile"], days)
-        written = ctx.summariser.write("the doctor and the family", facts, care.period_template(facts))
+        template = care.period_template(facts)
+        written = (
+            ctx.summariser.write("the doctor and the family", facts, template)
+            if write
+            else {"text": template, "source": "template"}
+        )
         notes = store.list(current["pid"], "notes", field="date", lo=facts["from"], hi=facts["to"])
         return {
             "facts": facts,

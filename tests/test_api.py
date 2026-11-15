@@ -189,3 +189,9 @@ def test_summary_has_a_day_by_day_timeline(client):
     assert len(timeline) == 7
     assert any("missed" in [d["state"] for d in row["doses"]] for row in timeline)
     assert any(row["tags"] for row in timeline)
+
+
+def test_summary_without_writing_is_the_template(client):
+    post(client, "/api/demo")
+    result = client.get("/api/summary?days=7&write=false").json()
+    assert result["summary"]["source"] == "template" and result["timeline"]

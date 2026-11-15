@@ -426,10 +426,22 @@
     }
   }
 
+  let summaryRequest = 0;
   async function loadSummary(days) {
+    const request = ++summaryRequest;
     for (const b of document.querySelectorAll("[data-days]")) b.setAttribute("aria-pressed", String(Number(b.dataset.days) === days));
-    document.getElementById("summary-text").textContent = "Writing the summary…";
-    const result = await api(`/api/summary?days=${days}`);
+    const result = await api(`/api/summary?days=${days}&write=false`);
+    if (request !== summaryRequest) return;
+    renderSummary(result);
+    document.getElementById("summary-source").textContent = "Gemini is rewording this from the record…";
+    api(`/api/summary?days=${days}`).then((written) => {
+      if (request === summaryRequest) renderSummary(written);
+    }).catch(() => {
+      if (request === summaryRequest) document.getElementById("summary-source").textContent = "Written from the record by a fixed template.";
+    });
+  }
+
+  function renderSummary(result) {
     const f = result.facts;
     document.getElementById("summary-text").textContent = result.summary.text;
     document.getElementById("summary-source").textContent = result.summary.source === "gemini"
