@@ -26,7 +26,7 @@ A reminder app does not help someone who cannot use a phone. What helps is the p
 | **Hold for Help** (2 seconds) emails the whole circle at once and shows one-tap calls for the ambulance and each person. | Reminders go to the person giving the dose first, then the whole family if it is still not marked. |
 | One picture question a day: 😊 Good / ☹️ Not good. The answer goes into the record. | Side-effect notes in one tap: tremor, confusion, fall, sleepy, nausea, pain, not eating, calm. |
 
-**The logic: decisions come from context, and fixed code makes them.** Each row below is a rule in `app/rules.py` or `app/api.py`, and each is covered by a test.
+**The logic: decisions come from context, and fixed code makes them.** Each row below is a rule in `app/rules.py` or `app/routes/`, and each is covered by a test.
 
 | Context | Decision |
 |---|---|
@@ -64,9 +64,9 @@ Thresholds are per family, under People & settings. Adherence is counted only fo
 |---|---|---|
 | Elder, caretakers and family share one healthcare profile | One "orbit" per elder; members with roles `family`, `caretaker`, `doctor`, `elder` (bedside) | `app/auth.py` (`allow(...)` on every route) |
 | Secure, passcode-based access | Each person has their own 6–12 digit passcode, stored only as a salted scrypt hash. Weak codes like `123456` are refused, and the orbit locks for 15 minutes after 5 wrong tries. Sessions use signed HttpOnly SameSite=Strict cookies. A removed person loses access immediately. | `app/security.py` |
-| View, add, edit, manage medication schedules | Medicines with several times a day, a named person for each time, tablet colour, instructions and stock. Stopping a medicine keeps its history. | `app/api.py` (medicines) |
+| View, add, edit, manage medication schedules | Medicines with several times a day, a named person for each time, tablet colour, instructions and stock. Stopping a medicine keeps its history. | `app/routes/medicines.py` |
 | Track adherence | Each dose is given, skipped, missed, due or upcoming. Adherence is shown by medicine and by time of day (morning, afternoon, evening, night) for 7, 14 or 30 days. | `app/rules.py` (`adherence`) |
-| Monitor upcoming doctor appointments | Each visit records who goes along, an optional repeat interval for regular checkups, a tap-to-call clinic number and an **Add to Google Calendar** link | `app/api.py`, `static/js/circle.js` |
+| Monitor upcoming doctor appointments | Each visit records who goes along, an optional repeat interval for regular checkups, a tap-to-call clinic number and an **Add to Google Calendar** link | `app/routes/visits.py`, `static/js/circle.js` |
 | Proactive email for **upcoming doses** | 15 minutes before a dose, to the person giving it | `app/rules.py` (`plan_notifications`) |
 | Proactive email for **missed medications** | 30 minutes after, to the giver; 60 minutes after, to the whole family | same |
 | Proactive email for **appointments** | A week before and the day before; also when a **regular checkup is due and nothing is booked** | same |
@@ -180,9 +180,14 @@ In Google Cloud Shell, from this folder: `gcloud config set project YOUR_PROJECT
 ## Repository layout
 
 ```
-app/        FastAPI app: rules.py (all decisions), api.py (routes and roles), security.py,
-            notify.py (emails exactly once), summary.py (Gemini, checked),
-            store.py / store_postgres.py / store_firestore.py (one interface, three backends)
+app/
+  rules.py        every decision: dose states, adherence, refills, checkups, who is emailed (pure functions)
+  routes/         the HTTP API, one module per area: account, doses (and bedside, Help), medicines,
+                  visits, people, reports, tasks; deps.py holds the shared role groups and checks
+  auth.py         sessions, roles, rate limits      security.py   passcodes, tokens, lockout
+  notify.py       emails, exactly once              summary.py    Gemini wording, checked
+  care.py         facts and templates               models.py     strict request bodies
+  store.py / store_postgres.py / store_firestore.py   one storage interface, three backends
 static/     index.html (landing), circle.html (family, nurse, doctor), bedside.html (the elder)
 tests/      rules, security, API flows, editing flows, every email kind, both email senders,
             the storage contract on memory and PostgreSQL, the model check
@@ -190,6 +195,6 @@ render.yaml Render Blueprint (free web service and PostgreSQL)
 deploy.sh   one-command Google Cloud deploy
 ```
 
-Orbit is a prototype. It does not replace medical advice or emergency services. In an emergency, call 112.
+Orbit is a prototype. It does not replace medical advice or emergency services. In an emergency, call 112 (ambulance 108).
 
 MIT licence.
